@@ -20,10 +20,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [
-            fenix.overlays.default
-            (import ./overlay.nix)
-          ];
+          overlays = [ fenix.overlays.default ];
         };
       in
       {
@@ -31,21 +28,30 @@
 
         packages = {
           default = self.packages.${system}.zeroclaw;
-          inherit (pkgs)
-            zeroclaw
-            zeroclaw-web
-            ;
+          zeroclaw-web = pkgs.callPackage ./web/package.nix { };
+          zeroclaw = pkgs.callPackage ./package.nix {
+            inherit (self.packages.${system}) zeroclaw-web;
+            rustToolchain = pkgs.fenix.stable.withComponents [
+              "cargo"
+              "clippy"
+              "rust-src"
+              "rustc"
+              "rustfmt"
+            ];
+          };
         };
 
         devShells.default = pkgs.mkShell {
-          inputsFrom = [ pkgs.zeroclaw ];
-          packages = [
-            pkgs.rust-analyzer
-          ];
+          inputsFrom = [ self.packages.${system}.zeroclaw ];
+          packages = [ pkgs.rust-analyzer ];
         };
       }
     )
     // {
-      overlays.default = import ./overlay.nix;
+      overlays.default = (
+        final: prev: {
+          inherit (self.packages.${final.system}) zeroclaw zeroclaw-web;
+        }
+      );
     };
 }
