@@ -55,4 +55,16 @@ rustPlatform.buildRustPackage (finalAttrs: {
   postFixup = ''
     find "$out" -type f -exec remove-references-to -t ${rustToolchain} '{}' +
   '';
+
+  meta = {
+    description = "Fast, small, and fully autonomous AI assistant infrastructure";
+    homepage = "https://github.com/zeroclaw-labs/zeroclaw";
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
+    mainProgram = "zeroclaw";
+    platforms = lib.platforms.all;
+    sourceProvenance = with lib.sourceTypes; [ fromSource ];
+  };
 })
