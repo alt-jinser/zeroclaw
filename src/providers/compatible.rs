@@ -110,7 +110,7 @@ impl OpenAiCompatibleProvider {
             auth_style,
             supports_vision,
             true,
-            None,
+            Some("curl/8.18.0"),
             false,
             CompatibleApiMode::OpenAiChatCompletions,
             None,
