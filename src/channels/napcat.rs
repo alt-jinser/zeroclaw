@@ -157,7 +157,7 @@ fn is_mention_self(event: &Value) -> bool {
                     && seg
                         .get("data")
                         .and_then(|d| d.get("qq"))
-                        .and_then(Value::as_u64)
+                        .and_then(|v| v.as_u64().or_else(|| v.as_str()?.parse().ok()))
                         == Some(self_id)
             })
         })
