@@ -59,7 +59,18 @@ fn compose_onebot_content(content: &str, reply_message_id: Option<&str>) -> Stri
         }
     }
 
-    for line in content.lines() {
+    let mut lines = content.lines().peekable();
+    if !parts.is_empty() {
+        while let Some(line) = lines.peek() {
+            if line.trim().is_empty() {
+                lines.next();
+            } else {
+                break;
+            }
+        }
+    }
+
+    for line in lines {
         let trimmed = line.trim();
         if let Some(marker) = trimmed
             .strip_prefix("[IMAGE:")
