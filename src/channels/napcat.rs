@@ -142,6 +142,28 @@ fn extract_message_id(event: &Value) -> String {
         .unwrap_or_else(|| Uuid::new_v4().to_string())
 }
 
+fn is_mention_self(event: &Value) -> bool {
+    let self_id = match event.get("self_id").and_then(Value::as_u64) {
+        Some(id) => id,
+        None => return false,
+    };
+
+    event
+        .get("message")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter().any(|seg| {
+                seg.get("type").and_then(Value::as_str) == Some("at")
+                    && seg
+                        .get("data")
+                        .and_then(|d| d.get("qq"))
+                        .and_then(Value::as_u64)
+                        == Some(self_id)
+            })
+        })
+        .unwrap_or(false)
+}
+
 fn extract_timestamp(event: &Value) -> u64 {
     event
         .get("time")
@@ -155,6 +177,7 @@ pub struct NapcatChannel {
     api_base_url: String,
     access_token: Option<String>,
     allowed_users: Vec<String>,
+    mention_only: bool,
     dedup: Arc<RwLock<HashSet<String>>>,
 }
 
@@ -178,6 +201,7 @@ impl NapcatChannel {
             api_base_url,
             access_token: normalize_token(config.access_token.as_deref().unwrap_or_default()),
             allowed_users: config.allowed_users,
+            mention_only: config.mention_only,
             dedup: Arc::new(RwLock::new(HashSet::new())),
         })
     }
@@ -293,6 +317,11 @@ impl NapcatChannel {
 
         if !self.is_user_allowed(&sender_id) {
             tracing::warn!("Napcat: ignoring message from unauthorized user: {sender_id}");
+            return None;
+        }
+
+        let is_private = message_type == "private";
+        if !is_private && self.mention_only && !is_mention_self(event) {
             return None;
         }
 
@@ -473,6 +502,7 @@ mod tests {
             api_base_url: "".into(),
             access_token: None,
             allowed_users: vec!["10001".into()],
+            mention_only: false,
         };
         let channel = NapcatChannel::from_config(cfg).unwrap();
         let event = json!({
@@ -499,6 +529,7 @@ mod tests {
             api_base_url: "".into(),
             access_token: None,
             allowed_users: vec!["*".into()],
+            mention_only: false,
         };
         let channel = NapcatChannel::from_config(cfg).unwrap();
         let event = json!({
