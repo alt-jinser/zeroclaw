@@ -26,6 +26,8 @@ rustPlatform.buildRustPackage (finalAttrs: {
           ./src
           ./Cargo.toml
           ./Cargo.lock
+          ./build.rs
+          ./templates
           ./crates
           ./benches
         ]
