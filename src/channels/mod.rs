@@ -3764,7 +3764,7 @@ or tune thresholds in config.",
     // React with 👀 to acknowledge the incoming message
     if let Some(channel) = target_channel.as_ref() {
         if let Err(e) = channel
-            .add_reaction(&msg.reply_target, &msg.id, "\u{1F440}")
+            .add_reaction(dbg!(&msg.reply_target), &msg.id, "\u{1F440}")
             .await
         {
             tracing::debug!("Failed to add reaction: {e}");

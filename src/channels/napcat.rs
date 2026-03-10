@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 const NAPCAT_SEND_PRIVATE: &str = "/send_private_msg";
 const NAPCAT_SEND_GROUP: &str = "/send_group_msg";
+const NAPCAT_SET_EMOJI_LIKE: &str = "/set_msg_emoji_like";
 const NAPCAT_STATUS: &str = "/get_status";
 const NAPCAT_DEDUP_CAPACITY: usize = 10_000;
 const NAPCAT_MAX_BACKOFF_SECS: u64 = 60;
@@ -183,6 +184,32 @@ fn extract_timestamp(event: &Value) -> u64 {
         .unwrap_or_else(current_unix_timestamp_secs)
 }
 
+fn extract_sender_id(event: &Value) -> Option<String> {
+    event
+        .get("user_id")
+        .and_then(Value::as_i64)
+        .map(|v| v.to_string())
+        .or_else(|| {
+            event
+                .get("sender")
+                .and_then(|s| s.get("user_id"))
+                .and_then(Value::as_i64)
+                .map(|v| v.to_string())
+        })
+}
+
+fn emoji_id(emoji: &str) -> &str {
+    match emoji {
+        // 👀       => [汪汪]
+        "\u{1F440}" => "277",
+        // ✅      => [OK]
+        "\u{2705}" => "124",
+        // ⚠️              => [头秃]
+        "\u{26A0}\u{FE0F}" => "267",
+        _ => "212", // [托腮]
+    }
+}
+
 pub struct NapcatChannel {
     websocket_url: String,
     api_base_url: String,
@@ -313,18 +340,7 @@ impl NapcatChannel {
             .get("message_type")
             .and_then(Value::as_str)
             .unwrap_or("");
-        let sender_id = event
-            .get("user_id")
-            .and_then(Value::as_i64)
-            .map(|v| v.to_string())
-            .or_else(|| {
-                event
-                    .get("sender")
-                    .and_then(|s| s.get("user_id"))
-                    .and_then(Value::as_i64)
-                    .map(|v| v.to_string())
-            })
-            .unwrap_or_else(|| "unknown".to_string());
+        let sender_id = extract_sender_id(event).unwrap_or_else(|| "unknown".to_string());
 
         if !self.is_user_allowed(&sender_id) {
             tracing::warn!("Napcat: ignoring message from unauthorized user: {sender_id}");
@@ -392,6 +408,7 @@ impl NapcatChannel {
                             continue;
                         }
                     };
+
                     if let Some(msg) = self.parse_message_event(&event).await {
                         if tx.send(msg).await.is_err() {
                             return Ok(());
@@ -484,6 +501,36 @@ impl Channel for NapcatChannel {
             .await
             .map(|resp| resp.status().is_success())
             .unwrap_or(false)
+    }
+
+    async fn add_reaction(
+        &self,
+        _channel_id: &str,
+        message_id: &str,
+        emoji: &str,
+    ) -> anyhow::Result<()> {
+        let eid = emoji_id(emoji);
+        let body = json!({
+            "message_id": message_id,
+            "emoji_id": eid,
+            "set": true,
+        });
+        self.post_onebot(NAPCAT_SET_EMOJI_LIKE, &body).await
+    }
+
+    async fn remove_reaction(
+        &self,
+        _channel_id: &str,
+        message_id: &str,
+        emoji: &str,
+    ) -> anyhow::Result<()> {
+        let eid = emoji_id(emoji);
+        let body = json!({
+            "message_id": message_id,
+            "emoji_id": eid,
+            "set": false,
+        });
+        self.post_onebot(NAPCAT_SET_EMOJI_LIKE, &body).await
     }
 }
 
