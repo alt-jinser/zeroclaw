@@ -75,45 +75,44 @@ use clap::Subcommand;
 use serde::{Deserialize, Serialize};
 
 pub mod agent;
-pub(crate) mod approval;
-pub(crate) mod auth;
+pub mod approval;
+pub mod auth;
 pub mod channels;
 pub mod config;
 pub mod coordination;
-pub(crate) mod cost;
-pub(crate) mod cron;
-pub(crate) mod daemon;
-pub(crate) mod doctor;
+pub mod cost;
+pub mod cron;
+pub mod daemon;
+pub mod doctor;
 pub mod economic;
 pub mod gateway;
 pub mod goals;
-pub(crate) mod hardware;
-pub(crate) mod health;
-pub(crate) mod heartbeat;
+pub mod hardware;
+pub mod health;
+pub mod heartbeat;
 pub mod hooks;
-pub(crate) mod identity;
-// Intentionally unused re-export — public API surface for plugin authors.
-pub(crate) mod integrations;
+pub mod identity;
+pub mod integrations;
 pub mod memory;
-pub(crate) mod migration;
-pub(crate) mod multimodal;
+pub mod migration;
+pub mod multimodal;
 pub mod observability;
-pub(crate) mod onboard;
+pub mod onboard;
 pub mod peripherals;
-#[allow(unused_imports)]
-pub(crate) mod plugins;
+pub mod plugins;
 pub mod providers;
 pub mod rag;
 pub mod runtime;
-pub(crate) mod security;
-pub(crate) mod service;
-pub(crate) mod skills;
+pub mod security;
+pub mod service;
+pub mod skillforge;
+pub mod skills;
 #[cfg(test)]
-pub(crate) mod test_locks;
+pub mod test_locks;
 pub mod tools;
-pub(crate) mod tunnel;
+pub mod tunnel;
 pub mod update;
-pub(crate) mod util;
+pub mod util;
 
 pub use config::Config;
 

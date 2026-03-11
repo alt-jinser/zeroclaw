@@ -75,6 +75,11 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
+use zeroclaw::{
+    agent, auth, channels, config, cron, daemon, doctor, gateway, hardware, integrations, memory,
+    migration, observability, onboard, peripherals, providers, security, service, skills, update,
+    MemoryCommands,
+};
 
 const PROFILE_MISMATCH_PREFIX: &str = "Pending login profile mismatch:";
 const ZEROCLAW_BUILD_VERSION: &str = env!("ZEROCLAW_BUILD_VERSION");
@@ -140,45 +145,6 @@ async fn open_url_in_default_browser(url: &str) -> Result<()> {
         }
     }
 }
-
-mod agent;
-mod approval;
-mod auth;
-mod channels;
-mod config;
-mod coordination;
-mod cost;
-mod cron;
-mod daemon;
-mod doctor;
-mod gateway;
-mod goals;
-mod hardware;
-mod health;
-mod heartbeat;
-mod hooks;
-mod identity;
-mod integrations;
-mod memory;
-mod migration;
-mod multimodal;
-mod observability;
-mod onboard;
-mod peripherals;
-mod plugins;
-mod providers;
-mod rag;
-mod runtime;
-mod security;
-mod service;
-mod skillforge;
-mod skills;
-#[cfg(test)]
-mod test_locks;
-mod tools;
-mod tunnel;
-mod update;
-mod util;
 
 use config::Config;
 
