@@ -210,19 +210,6 @@ impl SkillToolHandler {
         schema
     }
 
-    /// Escape shell special characters for safe command execution
-    fn shell_escape(s: &str) -> String {
-        // If the string is simple (alphanumeric + safe chars), return as-is
-        if s.chars()
-            .all(|c| c.is_alphanumeric() || c == '_' || c == '-' || c == '.' || c == '/')
-        {
-            return s.to_string();
-        }
-
-        // Otherwise, single-quote and escape any single quotes
-        format!("'{}'", s.replace('\'', "'\\''"))
-    }
-
     /// Substitute arguments into command template
     fn render_command(&self, args: &serde_json::Value) -> Result<String> {
         let mut command = self.tool_def.command.clone();

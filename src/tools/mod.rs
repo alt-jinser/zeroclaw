@@ -522,9 +522,6 @@ pub fn all_tools_with_runtime(
             browser_config.agent_browser_command.clone(),
             browser_config.agent_browser_extra_args.clone(),
             browser_config.agent_browser_timeout_ms,
-            browser_config.native_headless,
-            browser_config.native_webdriver_url.clone(),
-            browser_config.native_chrome_path.clone(),
             ComputerUseConfig {
                 endpoint: browser_config.computer_use.endpoint.clone(),
                 api_key: browser_config.computer_use.api_key.clone(),

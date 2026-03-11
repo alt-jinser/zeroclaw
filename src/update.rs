@@ -348,22 +348,6 @@ fn replace_binary(new_binary: &Path, current_exe: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Check if an update is available
-pub async fn check_for_update() -> Result<Option<String>> {
-    let release = fetch_latest_release().await?;
-    let latest_version = release.tag_name.trim_start_matches('v');
-
-    if latest_version == current_version() {
-        Ok(None)
-    } else {
-        Ok(Some(format!(
-            "{} (current: {})",
-            release.tag_name,
-            current_version()
-        )))
-    }
-}
-
 /// Perform the self-update
 pub async fn self_update(force: bool, check_only: bool) -> Result<()> {
     println!("🦀 ZeroClaw Self-Update");

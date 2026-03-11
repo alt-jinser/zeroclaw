@@ -3,7 +3,6 @@
 use crate::config::AuditConfig;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -147,7 +146,6 @@ impl AuditEvent {
 pub struct AuditLogger {
     log_path: PathBuf,
     config: AuditConfig,
-    buffer: Mutex<Vec<AuditEvent>>,
 }
 
 /// Structured command execution details for audit logging.
@@ -166,11 +164,7 @@ impl AuditLogger {
     /// Create a new audit logger
     pub fn new(config: AuditConfig, zeroclaw_dir: PathBuf) -> Result<Self> {
         let log_path = zeroclaw_dir.join(&config.log_path);
-        Ok(Self {
-            log_path,
-            config,
-            buffer: Mutex::new(Vec::new()),
-        })
+        Ok(Self { log_path, config })
     }
 
     /// Log an event

@@ -72,9 +72,6 @@ pub struct BrowserTool {
     agent_browser_command: String,
     agent_browser_extra_args: Vec<String>,
     agent_browser_timeout_ms: u64,
-    native_headless: bool,
-    native_webdriver_url: String,
-    native_chrome_path: Option<String>,
     computer_use: ComputerUseConfig,
     #[cfg(feature = "browser-native")]
     native_state: tokio::sync::Mutex<native_backend::NativeBrowserState>,
@@ -221,9 +218,6 @@ impl BrowserTool {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         )
     }
@@ -238,9 +232,6 @@ impl BrowserTool {
         agent_browser_command: String,
         agent_browser_extra_args: Vec<String>,
         agent_browser_timeout_ms: u64,
-        native_headless: bool,
-        native_webdriver_url: String,
-        native_chrome_path: Option<String>,
         computer_use: ComputerUseConfig,
     ) -> Self {
         Self::new_with_backend_and_url_access(
@@ -253,9 +244,6 @@ impl BrowserTool {
             agent_browser_command,
             agent_browser_extra_args,
             agent_browser_timeout_ms,
-            native_headless,
-            native_webdriver_url,
-            native_chrome_path,
             computer_use,
         )
     }
@@ -271,9 +259,6 @@ impl BrowserTool {
         agent_browser_command: String,
         agent_browser_extra_args: Vec<String>,
         agent_browser_timeout_ms: u64,
-        native_headless: bool,
-        native_webdriver_url: String,
-        native_chrome_path: Option<String>,
         computer_use: ComputerUseConfig,
     ) -> Self {
         Self {
@@ -286,9 +271,6 @@ impl BrowserTool {
             agent_browser_command,
             agent_browser_extra_args,
             agent_browser_timeout_ms,
-            native_headless,
-            native_webdriver_url,
-            native_chrome_path,
             computer_use,
             #[cfg(feature = "browser-native")]
             native_state: tokio::sync::Mutex::new(native_backend::NativeBrowserState::default()),
@@ -2370,6 +2352,7 @@ fn unavailable_action_for_backend_error(action: &str, backend: ResolvedBackend) 
     )
 }
 
+#[cfg(feature = "browser-native")]
 fn is_recoverable_rust_native_error(err: &anyhow::Error) -> bool {
     let message = format!("{err:#}").to_ascii_lowercase();
 
@@ -2415,33 +2398,6 @@ fn endpoint_reachable(endpoint: &reqwest::Url, timeout: Duration) -> bool {
     };
 
     std::net::TcpStream::connect_timeout(&addr, timeout).is_ok()
-}
-
-fn extract_host(url_str: &str) -> anyhow::Result<String> {
-    // Simple host extraction without url crate
-    let url = url_str.trim();
-    let without_scheme = url
-        .strip_prefix("https://")
-        .or_else(|| url.strip_prefix("http://"))
-        .or_else(|| url.strip_prefix("file://"))
-        .unwrap_or(url);
-
-    // Extract host — handle bracketed IPv6 addresses like [::1]:8080
-    let authority = without_scheme.split('/').next().unwrap_or(without_scheme);
-
-    let host = if authority.starts_with('[') {
-        // IPv6: take everything up to and including the closing ']'
-        authority.find(']').map_or(authority, |i| &authority[..=i])
-    } else {
-        // IPv4 or hostname: take everything before the port separator
-        authority.split(':').next().unwrap_or(authority)
-    };
-
-    if host.is_empty() {
-        anyhow::bail!("Invalid URL: no host");
-    }
-
-    Ok(host.to_lowercase())
 }
 
 fn is_private_host(host: &str) -> bool {
@@ -2510,22 +2466,6 @@ fn is_non_global_v6(v6: std::net::Ipv6Addr) -> bool {
         || v6.to_ipv4_mapped().is_some_and(is_non_global_v4)
 }
 
-fn host_matches_allowlist(host: &str, allowed: &[String]) -> bool {
-    allowed.iter().any(|pattern| {
-        if pattern == "*" {
-            return true;
-        }
-        if pattern.starts_with("*.") {
-            // Wildcard subdomain match
-            let suffix = &pattern[1..]; // ".example.com"
-            host.ends_with(suffix) || host == &pattern[2..]
-        } else {
-            // Exact match or subdomain
-            host == pattern || host.ends_with(&format!(".{pattern}"))
-        }
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2549,31 +2489,6 @@ mod tests {
         ];
         let normalized = normalize_domains(domains);
         assert_eq!(normalized, vec!["example.com", "docs.example.com"]);
-    }
-
-    #[test]
-    fn extract_host_works() {
-        assert_eq!(
-            extract_host("https://example.com/path").unwrap(),
-            "example.com"
-        );
-        assert_eq!(
-            extract_host("https://Sub.Example.COM:8080/").unwrap(),
-            "sub.example.com"
-        );
-    }
-
-    #[test]
-    fn extract_host_handles_ipv6() {
-        // IPv6 with brackets (required for URLs with ports)
-        assert_eq!(extract_host("https://[::1]/path").unwrap(), "[::1]");
-        // IPv6 with brackets and port
-        assert_eq!(
-            extract_host("https://[2001:db8::1]:8080/path").unwrap(),
-            "[2001:db8::1]"
-        );
-        // IPv6 with brackets, trailing slash
-        assert_eq!(extract_host("https://[fe80::1]/").unwrap(), "[fe80::1]");
     }
 
     #[test]
@@ -2638,29 +2553,6 @@ mod tests {
     }
 
     #[test]
-    fn host_matches_allowlist_exact() {
-        let allowed = vec!["example.com".into()];
-        assert!(host_matches_allowlist("example.com", &allowed));
-        assert!(host_matches_allowlist("sub.example.com", &allowed));
-        assert!(!host_matches_allowlist("notexample.com", &allowed));
-    }
-
-    #[test]
-    fn host_matches_allowlist_wildcard() {
-        let allowed = vec!["*.example.com".into()];
-        assert!(host_matches_allowlist("sub.example.com", &allowed));
-        assert!(host_matches_allowlist("example.com", &allowed));
-        assert!(!host_matches_allowlist("other.com", &allowed));
-    }
-
-    #[test]
-    fn host_matches_allowlist_star() {
-        let allowed = vec!["*".into()];
-        assert!(host_matches_allowlist("anything.com", &allowed));
-        assert!(host_matches_allowlist("example.org", &allowed));
-    }
-
-    #[test]
     fn browser_backend_parser_accepts_supported_values() {
         assert_eq!(
             BrowserBackendKind::parse("agent_browser").unwrap(),
@@ -2707,9 +2599,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
         assert_eq!(tool.configured_backend().unwrap(), BrowserBackendKind::Auto);
@@ -2727,9 +2616,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
         assert_eq!(
@@ -2750,9 +2636,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
 
@@ -2782,9 +2665,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
 
@@ -2809,9 +2689,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
 
@@ -2830,9 +2707,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig {
                 endpoint: "http://computer-use.example.com/v1/actions".into(),
                 ..ComputerUseConfig::default()
@@ -2854,9 +2728,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig {
                 endpoint: "https://computer-use.example.com/v1/actions".into(),
                 allow_remote_endpoint: true,
@@ -2879,9 +2750,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig {
                 max_coordinate_x: Some(100),
                 max_coordinate_y: Some(100),
@@ -2923,9 +2791,6 @@ mod tests {
             "agent-browser".into(),
             Vec::new(),
             30_000,
-            true,
-            "http://127.0.0.1:9515".into(),
-            None,
             ComputerUseConfig::default(),
         );
 
@@ -3010,6 +2875,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "browser-native")]
     #[test]
     fn recoverable_error_detection_matches_session_patterns() {
         for message in [

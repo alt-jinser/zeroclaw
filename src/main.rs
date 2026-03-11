@@ -64,8 +64,7 @@
     clippy::unnecessary_lazy_evaluations,
     clippy::unnecessary_literal_bound,
     clippy::unnecessary_map_or,
-    clippy::unnecessary_wraps,
-    dead_code
+    clippy::unnecessary_wraps
 )]
 
 use anyhow::{bail, Context, Result};
@@ -809,45 +808,6 @@ enum DoctorCommands {
         /// Maximum number of events to display
         #[arg(long, default_value = "20")]
         limit: usize,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-enum MemoryCommands {
-    /// List memory entries with optional filters
-    List {
-        #[arg(long)]
-        category: Option<String>,
-        #[arg(long)]
-        session: Option<String>,
-        #[arg(long, default_value = "50")]
-        limit: usize,
-        #[arg(long, default_value = "0")]
-        offset: usize,
-    },
-    /// Get a specific memory entry by key
-    Get { key: String },
-    /// Show memory backend statistics and health
-    Stats,
-    /// Clear memories by category, by key, or clear all
-    Clear {
-        /// Delete a single entry by key (supports prefix match)
-        #[arg(long)]
-        key: Option<String>,
-        #[arg(long)]
-        category: Option<String>,
-        /// Skip confirmation prompt
-        #[arg(long)]
-        yes: bool,
-    },
-    /// Rebuild embeddings for all memories (use after changing embedding model)
-    Reindex {
-        /// Skip confirmation prompt
-        #[arg(long)]
-        yes: bool,
-        /// Show progress during reindex
-        #[arg(long, default_value = "true")]
-        progress: bool,
     },
 }
 

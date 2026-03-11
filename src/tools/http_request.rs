@@ -157,25 +157,6 @@ impl HttpRequestTool {
         result
     }
 
-    fn redact_headers_for_display(headers: &[(String, String)]) -> Vec<(String, String)> {
-        headers
-            .iter()
-            .map(|(key, value)| {
-                let lower = key.to_lowercase();
-                let is_sensitive = lower.contains("authorization")
-                    || lower.contains("api-key")
-                    || lower.contains("apikey")
-                    || lower.contains("token")
-                    || lower.contains("secret");
-                if is_sensitive {
-                    (key.clone(), "***REDACTED***".into())
-                } else {
-                    (key.clone(), value.clone())
-                }
-            })
-            .collect()
-    }
-
     fn resolve_credential_profile(
         &self,
         profile_name: &str,

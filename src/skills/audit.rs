@@ -43,10 +43,6 @@ impl SkillAuditReport {
     }
 }
 
-pub fn audit_skill_directory(skill_dir: &Path) -> Result<SkillAuditReport> {
-    audit_skill_directory_with_options(skill_dir, SkillAuditOptions::default())
-}
-
 pub fn audit_skill_directory_with_options(
     skill_dir: &Path,
     options: SkillAuditOptions,

@@ -58,13 +58,6 @@ impl GitOperationsTool {
     }
 
     /// Check if an operation is read-only
-    fn is_read_only(&self, operation: &str) -> bool {
-        matches!(
-            operation,
-            "status" | "diff" | "log" | "show" | "branch" | "rev-parse"
-        )
-    }
-
     async fn run_git_command(&self, args: &[&str]) -> anyhow::Result<String> {
         let output = tokio::process::Command::new("git")
             .args(args)

@@ -1801,10 +1801,6 @@ fn run_ngrok_probe(plan: &TuiOnboardPlan) -> CheckStatus {
     CheckStatus::Passed(format!("token accepted ({} active tunnels)", count))
 }
 
-pub async fn run_wizard_tui(force: bool) -> Result<Config> {
-    run_wizard_tui_with_migration(force, OpenClawOnboardMigrationOptions::default()).await
-}
-
 pub async fn run_wizard_tui_with_migration(
     force: bool,
     migration_options: OpenClawOnboardMigrationOptions,

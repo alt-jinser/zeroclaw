@@ -14,7 +14,7 @@ use crate::security::{CanaryGuard, SecurityPolicy};
 use crate::tools::{self, Tool};
 use crate::util::truncate_with_ellipsis;
 use anyhow::Result;
-use regex::{Regex, RegexSet};
+use regex::Regex;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
@@ -215,19 +215,6 @@ impl Highlighter for SlashCommandCompleter {
 impl Validator for SlashCommandCompleter {}
 impl Helper for SlashCommandCompleter {}
 
-static SENSITIVE_KEY_PATTERNS: LazyLock<RegexSet> = LazyLock::new(|| {
-    RegexSet::new([
-        r"(?i)token",
-        r"(?i)api[_-]?key",
-        r"(?i)password",
-        r"(?i)secret",
-        r"(?i)user[_-]?key",
-        r"(?i)bearer",
-        r"(?i)credential",
-    ])
-    .unwrap()
-});
-
 static SENSITIVE_KV_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(token|api[_-]?key|password|secret|user[_-]?key|bearer|credential)["']?\s*[:=]\s*(?:"([^"]{8,})"|'([^']{8,})'|([a-zA-Z0-9_\-\.]{8,}))"#).unwrap()
 });
@@ -305,14 +292,6 @@ pub(crate) fn scrub_credentials(input: &str) -> String {
         })
         .to_string()
 }
-
-/// Default trigger for auto-compaction when non-system message count exceeds this threshold.
-/// Prefer passing the config-driven value via `run_tool_call_loop`; this constant is only
-/// used when callers omit the parameter.
-const DEFAULT_MAX_HISTORY_MESSAGES: usize = 50;
-
-/// Minimum interval between progress sends to avoid flooding the draft channel.
-pub(crate) const PROGRESS_MIN_INTERVAL_MS: u64 = 500;
 
 /// Sentinel value sent through on_delta to signal the draft updater to clear accumulated text.
 /// Used before streaming the final answer so progress lines are replaced by the clean response.
@@ -830,23 +809,6 @@ async fn await_non_cli_approval_decision(
     }
 }
 
-/// Convert a tool registry to OpenAI function-calling format for native tool support.
-fn tools_to_openai_format(tools_registry: &[Box<dyn Tool>]) -> Vec<serde_json::Value> {
-    tools_registry
-        .iter()
-        .map(|tool| {
-            serde_json::json!({
-                "type": "function",
-                "function": {
-                    "name": tool.name(),
-                    "description": tool.description(),
-                    "parameters": tool.parameters_schema()
-                }
-            })
-        })
-        .collect()
-}
-
 fn autosave_memory_key(prefix: &str) -> String {
     format!("{prefix}_{}", Uuid::new_v4())
 }
@@ -928,27 +890,6 @@ fn build_native_assistant_history_from_parsed_calls(
     Some(obj.to_string())
 }
 
-fn build_assistant_history_with_tool_calls(text: &str, tool_calls: &[ToolCall]) -> String {
-    let mut parts = Vec::new();
-
-    if !text.trim().is_empty() {
-        parts.push(text.trim().to_string());
-    }
-
-    for call in tool_calls {
-        let arguments = serde_json::from_str::<serde_json::Value>(&call.arguments)
-            .unwrap_or_else(|_| serde_json::Value::String(call.arguments.clone()));
-        let payload = serde_json::json!({
-            "id": call.id,
-            "name": call.name,
-            "arguments": arguments,
-        });
-        parts.push(format!("<tool_call>\n{payload}\n</tool_call>"));
-    }
-
-    parts.join("\n")
-}
-
 #[derive(Debug)]
 pub(crate) struct ToolLoopCancelled;
 
@@ -1016,60 +957,6 @@ pub(crate) async fn agent_turn(
                 None,
                 None,
                 &[],
-            ),
-        )
-        .await
-}
-
-/// Run the tool loop with channel reply_target context, used by channel runtimes
-/// to auto-populate delivery routing for scheduled reminders.
-#[allow(clippy::too_many_arguments)]
-pub(crate) async fn run_tool_call_loop_with_reply_target(
-    provider: &dyn Provider,
-    history: &mut Vec<ChatMessage>,
-    tools_registry: &[Box<dyn Tool>],
-    observer: &dyn Observer,
-    provider_name: &str,
-    model: &str,
-    temperature: f64,
-    silent: bool,
-    approval: Option<&ApprovalManager>,
-    channel_name: &str,
-    reply_target: Option<&str>,
-    multimodal_config: &crate::config::MultimodalConfig,
-    max_tool_iterations: usize,
-    cancellation_token: Option<CancellationToken>,
-    on_delta: Option<tokio::sync::mpsc::Sender<String>>,
-    hooks: Option<&crate::hooks::HookRunner>,
-    excluded_tools: &[String],
-    progress_mode: ProgressMode,
-) -> Result<String> {
-    TOOL_LOOP_PROGRESS_MODE
-        .scope(
-            progress_mode,
-            TOOL_LOOP_CANARY_TOKENS_ENABLED.scope(
-                false,
-                TOOL_LOOP_REPLY_TARGET.scope(
-                    reply_target.map(str::to_string),
-                    run_tool_call_loop(
-                        provider,
-                        history,
-                        tools_registry,
-                        observer,
-                        provider_name,
-                        model,
-                        temperature,
-                        silent,
-                        approval,
-                        channel_name,
-                        multimodal_config,
-                        max_tool_iterations,
-                        cancellation_token,
-                        on_delta,
-                        hooks,
-                        excluded_tools,
-                    ),
-                ),
             ),
         )
         .await
@@ -6515,32 +6402,6 @@ Tail"#;
 
         assert!(instructions.contains("Autonomy level: `read_only`"));
         assert!(instructions.contains("Shell execution is disabled"));
-    }
-
-    #[test]
-    fn tools_to_openai_format_produces_valid_schema() {
-        use crate::security::SecurityPolicy;
-        let security = Arc::new(SecurityPolicy::from_config(
-            &crate::config::AutonomyConfig::default(),
-            std::path::Path::new("/tmp"),
-        ));
-        let tools = tools::default_tools(security);
-        let formatted = tools_to_openai_format(&tools);
-
-        assert!(!formatted.is_empty());
-        for tool_json in &formatted {
-            assert_eq!(tool_json["type"], "function");
-            assert!(tool_json["function"]["name"].is_string());
-            assert!(tool_json["function"]["description"].is_string());
-            assert!(!tool_json["function"]["name"].as_str().unwrap().is_empty());
-        }
-        // Verify known tools are present
-        let names: Vec<&str> = formatted
-            .iter()
-            .filter_map(|t| t["function"]["name"].as_str())
-            .collect();
-        assert!(names.contains(&"shell"));
-        assert!(names.contains(&"file_read"));
     }
 
     #[test]

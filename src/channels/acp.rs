@@ -10,16 +10,11 @@ use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::VecDeque;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::mpsc;
 use tokio::sync::Mutex;
-
-/// Monotonic counter for message IDs in ACP JSON-RPC requests.
-static ACP_MESSAGE_ID: AtomicU64 = AtomicU64::new(0);
 
 /// ACP channel implementation for connecting to OpenCode ACP server.
 ///
@@ -36,16 +31,10 @@ pub struct AcpChannel {
     extra_args: Vec<String>,
     /// Allowed user identifiers (empty = deny all, "*" = allow all)
     allowed_users: Vec<String>,
-    /// Optional pairing guard for authentication
-    pairing: Option<crate::security::pairing::PairingGuard>,
-    /// HTTP client for potential future HTTP transport support
-    client: reqwest::Client,
     /// Active OpenCode subprocess and its I/O handles
     process: Arc<Mutex<Option<AcpProcess>>>,
     /// Serializes ACP send operations to avoid concurrent process take/spawn races.
     send_operation_lock: Arc<Mutex<()>>,
-    /// Next message ID for JSON-RPC requests
-    next_message_id: Arc<AtomicU64>,
     /// Optional response channel for sending ACP responses back to original channel
     response_channel: Option<Arc<dyn Channel>>,
 }
@@ -61,15 +50,6 @@ struct AcpProcess {
     session_id: Option<String>,
     /// JSON-RPC message ID counter (per-process)
     message_id: u64,
-    /// Pending responses keyed by request ID
-    pending_responses: VecDeque<PendingResponse>,
-}
-
-/// Pending JSON-RPC response awaiting completion.
-struct PendingResponse {
-    request_id: u64,
-    method: String,
-    created_at: std::time::Instant,
 }
 
 /// JSON-RPC 2.0 request structure.
@@ -85,7 +65,6 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response structure.
 #[derive(Debug, Clone, Deserialize)]
 struct JsonRpcResponse {
-    jsonrpc: String,
     id: u64,
     #[serde(flatten)]
     result_or_error: JsonRpcResultOrError,
@@ -104,8 +83,6 @@ enum JsonRpcResultOrError {
 struct JsonRpcError {
     code: i32,
     message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<Value>,
 }
 
 /// ACP initialization parameters.
@@ -172,11 +149,8 @@ impl AcpChannel {
             workdir: config.workdir,
             extra_args: config.extra_args,
             allowed_users: config.allowed_users,
-            pairing: None, // TODO: Implement pairing if needed
-            client: reqwest::Client::new(),
             process: Arc::new(Mutex::new(None)),
             send_operation_lock: Arc::new(Mutex::new(())),
-            next_message_id: Arc::new(AtomicU64::new(0)),
             response_channel: None,
         }
     }
@@ -231,7 +205,6 @@ impl AcpChannel {
             stdout: stdout_reader,
             session_id: None,
             message_id: 0,
-            pending_responses: VecDeque::new(),
         };
 
         Ok(process)
@@ -828,7 +801,6 @@ mod tests {
             stdout,
             session_id: Some("test-session".to_string()),
             message_id: 0,
-            pending_responses: VecDeque::new(),
         }
     }
 

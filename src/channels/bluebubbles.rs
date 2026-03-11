@@ -75,7 +75,6 @@ fn extract_effect(text: &str) -> (String, Option<String>) {
 /// A cached `fromMe` message — kept so reply context can be resolved when
 /// the other party replies to something the bot sent.
 struct FromMeCacheEntry {
-    chat_guid: String,
     body: String,
 }
 
@@ -324,14 +323,13 @@ impl BlueBubblesChannel {
     }
 
     /// Cache a `fromMe` message for later reply-context resolution.
-    fn cache_from_me(&self, message_id: &str, chat_guid: &str, body: &str) {
+    fn cache_from_me(&self, message_id: &str, body: &str) {
         if message_id.is_empty() {
             return;
         }
         self.from_me_cache.lock().insert(
             message_id.to_string(),
             FromMeCacheEntry {
-                chat_guid: chat_guid.to_string(),
                 body: body.to_string(),
             },
         );
@@ -451,14 +449,13 @@ impl BlueBubblesChannel {
         if is_from_me {
             // Cache outgoing messages so reply context can be resolved later.
             let message_id = Self::extract_message_id(data).unwrap_or_default();
-            let chat_guid = Self::extract_chat_guid(data).unwrap_or_default();
             let body = data
                 .get("text")
                 .or_else(|| data.get("body"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            self.cache_from_me(&message_id, &chat_guid, &body);
+            self.cache_from_me(&message_id, &body);
             tracing::debug!("BlueBubbles: cached fromMe message {message_id}");
             return messages;
         }

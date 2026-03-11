@@ -23,7 +23,6 @@ const ALLOWED_IMAGE_MIME_TYPES: &[&str] = &[
 #[derive(Debug, Clone)]
 pub struct PreparedMessages {
     pub messages: Vec<ChatMessage>,
-    pub contains_images: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -100,10 +99,6 @@ pub fn count_image_markers(messages: &[ChatMessage]) -> usize {
         .sum()
 }
 
-pub fn contains_image_markers(messages: &[ChatMessage]) -> bool {
-    count_image_markers(messages) > 0
-}
-
 pub fn extract_ollama_image_payload(image_ref: &str) -> Option<String> {
     if image_ref.starts_with("data:") {
         let comma_idx = image_ref.find(',')?;
@@ -117,13 +112,6 @@ pub fn extract_ollama_image_payload(image_ref: &str) -> Option<String> {
     } else {
         Some(image_ref.trim().to_string()).filter(|value| !value.is_empty())
     }
-}
-
-pub async fn prepare_messages_for_provider(
-    messages: &[ChatMessage],
-    config: &MultimodalConfig,
-) -> anyhow::Result<PreparedMessages> {
-    prepare_messages_for_provider_with_provider_hint(messages, config, None).await
 }
 
 pub async fn prepare_messages_for_provider_with_provider_hint(
@@ -146,7 +134,6 @@ pub async fn prepare_messages_for_provider_with_provider_hint(
     if found_images == 0 {
         return Ok(PreparedMessages {
             messages: messages.to_vec(),
-            contains_images: false,
         });
     }
 
@@ -179,7 +166,6 @@ pub async fn prepare_messages_for_provider_with_provider_hint(
 
     Ok(PreparedMessages {
         messages: normalized_messages,
-        contains_images: true,
     })
 }
 

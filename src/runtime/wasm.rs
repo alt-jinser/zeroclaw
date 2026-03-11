@@ -12,9 +12,8 @@
 //! The default ZeroClaw binary excludes it to maintain the 4.6 MB size target.
 
 use super::traits::RuntimeAdapter;
-use crate::config::{WasmCapabilityEscalationMode, WasmModuleHashPolicy, WasmRuntimeConfig};
+use crate::config::{WasmModuleHashPolicy, WasmRuntimeConfig};
 use anyhow::{bail, Context, Result};
-use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 
@@ -282,155 +281,6 @@ impl WasmRuntime {
             );
         }
         Ok(normalized)
-    }
-
-    fn check_module_integrity(&self, module_name: &str, wasm_bytes: &[u8]) -> Result<String> {
-        let digest = hex::encode(Sha256::digest(wasm_bytes));
-        let normalized_pins = self.normalize_module_sha256_pins()?;
-        match self.config.security.module_hash_policy {
-            WasmModuleHashPolicy::Disabled => {}
-            WasmModuleHashPolicy::Warn => match normalized_pins.get(module_name) {
-                Some(expected) if expected == &digest => {}
-                Some(expected) => {
-                    tracing::warn!(
-                        module = module_name,
-                        expected_sha256 = expected,
-                        actual_sha256 = digest,
-                        "WASM module SHA-256 mismatch (warn mode)"
-                    );
-                }
-                None => {
-                    tracing::warn!(
-                        module = module_name,
-                        actual_sha256 = digest,
-                        "WASM module has no SHA-256 pin configured (warn mode)"
-                    );
-                }
-            },
-            WasmModuleHashPolicy::Enforce => match normalized_pins.get(module_name) {
-                Some(expected) if expected == &digest => {}
-                Some(expected) => {
-                    bail!(
-                        "WASM module integrity mismatch for '{module_name}': expected sha256={expected}, got sha256={digest}"
-                    );
-                }
-                None => {
-                    bail!(
-                        "WASM module '{module_name}' is missing required SHA-256 pin (runtime.wasm.security.module_hash_policy='enforce')"
-                    );
-                }
-            },
-        }
-        Ok(digest)
-    }
-
-    fn validate_capabilities(&self, caps: &WasmCapabilities) -> Result<WasmCapabilities> {
-        let default_hosts = self.normalize_hosts_with_policy(
-            self.config.allowed_hosts.iter().map(String::as_str),
-            "runtime.wasm.allowed_hosts",
-        )?;
-        let requested_hosts = self.normalize_hosts_with_policy(
-            caps.allowed_hosts.iter().map(String::as_str),
-            "wasm invocation allowed_hosts",
-        )?;
-
-        match self.config.security.capability_escalation_mode {
-            WasmCapabilityEscalationMode::Deny => {
-                if caps.read_workspace && !self.config.allow_workspace_read {
-                    bail!(
-                        "WASM capability escalation blocked: read_workspace requested but runtime.wasm.allow_workspace_read is false"
-                    );
-                }
-                if caps.write_workspace && !self.config.allow_workspace_write {
-                    bail!(
-                        "WASM capability escalation blocked: write_workspace requested but runtime.wasm.allow_workspace_write is false"
-                    );
-                }
-                if caps.fuel_override > self.config.fuel_limit {
-                    bail!(
-                        "WASM capability escalation blocked: fuel_override={} exceeds runtime.wasm.fuel_limit={}",
-                        caps.fuel_override,
-                        self.config.fuel_limit
-                    );
-                }
-                if caps.memory_override_mb > self.config.memory_limit_mb {
-                    bail!(
-                        "WASM capability escalation blocked: memory_override_mb={} exceeds runtime.wasm.memory_limit_mb={}",
-                        caps.memory_override_mb,
-                        self.config.memory_limit_mb
-                    );
-                }
-                for host in &requested_hosts {
-                    if !default_hosts.contains(host) {
-                        bail!(
-                            "WASM capability escalation blocked: host '{host}' is not in runtime.wasm.allowed_hosts"
-                        );
-                    }
-                }
-                Ok(WasmCapabilities {
-                    read_workspace: caps.read_workspace,
-                    write_workspace: caps.write_workspace,
-                    allowed_hosts: requested_hosts.into_iter().collect(),
-                    fuel_override: caps.fuel_override,
-                    memory_override_mb: caps.memory_override_mb,
-                })
-            }
-            WasmCapabilityEscalationMode::Clamp => {
-                let mut effective = WasmCapabilities {
-                    read_workspace: caps.read_workspace && self.config.allow_workspace_read,
-                    write_workspace: caps.write_workspace && self.config.allow_workspace_write,
-                    allowed_hosts: requested_hosts
-                        .intersection(&default_hosts)
-                        .cloned()
-                        .collect::<Vec<_>>(),
-                    fuel_override: if caps.fuel_override > self.config.fuel_limit {
-                        self.config.fuel_limit
-                    } else {
-                        caps.fuel_override
-                    },
-                    memory_override_mb: if caps.memory_override_mb > self.config.memory_limit_mb {
-                        self.config.memory_limit_mb
-                    } else {
-                        caps.memory_override_mb
-                    },
-                };
-
-                if caps.read_workspace && !effective.read_workspace {
-                    tracing::warn!(
-                        "Clamped WASM read_workspace request because runtime.wasm.allow_workspace_read=false"
-                    );
-                }
-                if caps.write_workspace && !effective.write_workspace {
-                    tracing::warn!(
-                        "Clamped WASM write_workspace request because runtime.wasm.allow_workspace_write=false"
-                    );
-                }
-                if caps.fuel_override > self.config.fuel_limit {
-                    tracing::warn!(
-                        requested = caps.fuel_override,
-                        allowed = self.config.fuel_limit,
-                        "Clamped WASM fuel_override to runtime.wasm.fuel_limit"
-                    );
-                }
-                if caps.memory_override_mb > self.config.memory_limit_mb {
-                    tracing::warn!(
-                        requested = caps.memory_override_mb,
-                        allowed = self.config.memory_limit_mb,
-                        "Clamped WASM memory_override_mb to runtime.wasm.memory_limit_mb"
-                    );
-                }
-                if effective.allowed_hosts.len() != requested_hosts.len() {
-                    tracing::warn!(
-                        requested = requested_hosts.len(),
-                        allowed = effective.allowed_hosts.len(),
-                        "Clamped WASM allowed_hosts to runtime.wasm.allowed_hosts"
-                    );
-                }
-
-                effective.allowed_hosts.sort();
-                Ok(effective)
-            }
-        }
     }
 
     /// Execute a WASM module from the tools directory.
@@ -1061,18 +911,6 @@ mod tests {
         assert!(err
             .to_string()
             .contains("not in runtime.wasm.allowed_hosts"));
-    }
-
-    #[test]
-    fn validate_capabilities_accepts_host_subset() {
-        let mut cfg = default_config();
-        cfg.allowed_hosts = vec!["api.example.com".into(), "cdn.example.com".into()];
-        let rt = WasmRuntime::new(cfg);
-        let caps = WasmCapabilities {
-            allowed_hosts: vec!["api.example.com".into()],
-            ..Default::default()
-        };
-        assert!(rt.validate_capabilities(&caps).is_ok());
     }
 
     #[test]

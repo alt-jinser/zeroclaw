@@ -5,42 +5,15 @@
 //! exchange messages. See Issue #1518 for design rationale.
 
 use super::traits::{Tool, ToolResult};
-use crate::config::AgentsIpcConfig;
 use crate::security::policy::ToolOperation;
 use crate::security::SecurityPolicy;
 use async_trait::async_trait;
 use rusqlite::Connection;
 use serde_json::json;
-use sha2::{Digest, Sha256};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // ── IpcDb core ──────────────────────────────────────────────────
-
-const PRAGMA_SQL: &str =
-    "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;";
-
-const SCHEMA_SQL: &str = "CREATE TABLE IF NOT EXISTS agents (
-    agent_id  TEXT PRIMARY KEY,
-    role      TEXT,
-    status    TEXT DEFAULT 'online',
-    metadata  TEXT,
-    last_seen INTEGER
-);
-CREATE TABLE IF NOT EXISTS messages (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    from_agent TEXT NOT NULL,
-    to_agent   TEXT NOT NULL,
-    payload    TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    read       INTEGER DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS shared_state (
-    key        TEXT PRIMARY KEY,
-    value      TEXT NOT NULL,
-    owner      TEXT NOT NULL,
-    updated_at INTEGER NOT NULL
-);";
 
 /// Shared SQLite handle for IPC tools. Each ZeroClaw process holds one instance.
 pub(crate) struct IpcDb {
@@ -57,61 +30,6 @@ fn now_epoch() -> i64 {
 }
 
 impl IpcDb {
-    /// Initialize connection: set pragmas, create schema, register agent.
-    fn init(conn: Connection, agent_id: String, staleness_secs: u64) -> Result<Self, String> {
-        conn.execute_batch(PRAGMA_SQL)
-            .map_err(|e| format!("failed to set pragmas: {e}"))?;
-        conn.execute_batch(SCHEMA_SQL)
-            .map_err(|e| format!("failed to create schema: {e}"))?;
-
-        let now = now_epoch();
-        // Use UPDATE + INSERT to preserve existing role/metadata columns
-        let updated = conn
-            .execute(
-                "UPDATE agents SET status = 'online', last_seen = ?2 WHERE agent_id = ?1",
-                rusqlite::params![agent_id, now],
-            )
-            .map_err(|e| format!("failed to update agent: {e}"))?;
-        if updated == 0 {
-            conn.execute(
-                "INSERT INTO agents (agent_id, status, last_seen) VALUES (?1, 'online', ?2)",
-                rusqlite::params![agent_id, now],
-            )
-            .map_err(|e| format!("failed to register agent: {e}"))?;
-        }
-
-        Ok(Self {
-            conn: Arc::new(Mutex::new(conn)),
-            agent_id,
-            staleness_secs,
-        })
-    }
-
-    /// Open (or create) the shared IPC database and register this agent.
-    ///
-    /// `workspace_dir` is hashed to derive a stable, code-enforced `agent_id`.
-    pub fn open(workspace_dir: &std::path::Path, config: &AgentsIpcConfig) -> Result<Self, String> {
-        let db_path = shellexpand::tilde(&config.db_path).into_owned();
-
-        // Ensure parent directory exists
-        if let Some(parent) = std::path::Path::new(&db_path).parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("failed to create db directory: {e}"))?;
-        }
-
-        let conn =
-            Connection::open(&db_path).map_err(|e| format!("failed to open IPC database: {e}"))?;
-
-        // Derive agent_id from workspace canonical path
-        let canonical = workspace_dir
-            .canonicalize()
-            .unwrap_or_else(|_| workspace_dir.to_path_buf());
-        let hash = Sha256::digest(canonical.to_string_lossy().as_bytes());
-        let agent_id = format!("{hash:x}");
-
-        Self::init(conn, agent_id, config.staleness_secs)
-    }
-
     /// Update `last_seen` timestamp. Called piggyback on every tool invocation.
     pub fn heartbeat(&self) {
         let now = now_epoch();
@@ -121,17 +39,6 @@ impl IpcDb {
                 rusqlite::params![now, self.agent_id],
             );
         }
-    }
-
-    pub fn agent_id(&self) -> &str {
-        &self.agent_id
-    }
-
-    #[cfg(test)]
-    fn open_with_id(db_path: &str, agent_id: &str, staleness_secs: u64) -> Result<Self, String> {
-        let conn =
-            Connection::open(db_path).map_err(|e| format!("failed to open IPC database: {e}"))?;
-        Self::init(conn, agent_id.to_string(), staleness_secs)
     }
 }
 
@@ -151,12 +58,6 @@ impl Drop for IpcDb {
 /// List online agents filtered by staleness window.
 pub struct AgentsListTool {
     ipc_db: Arc<IpcDb>,
-}
-
-impl AgentsListTool {
-    pub(crate) fn new(ipc_db: Arc<IpcDb>) -> Self {
-        Self { ipc_db }
-    }
 }
 
 #[async_trait]
@@ -217,12 +118,6 @@ impl Tool for AgentsListTool {
 pub struct AgentsSendTool {
     ipc_db: Arc<IpcDb>,
     security: Arc<SecurityPolicy>,
-}
-
-impl AgentsSendTool {
-    pub(crate) fn new(ipc_db: Arc<IpcDb>, security: Arc<SecurityPolicy>) -> Self {
-        Self { ipc_db, security }
-    }
 }
 
 #[async_trait]
@@ -314,12 +209,6 @@ pub struct AgentsInboxTool {
     ipc_db: Arc<IpcDb>,
 }
 
-impl AgentsInboxTool {
-    pub(crate) fn new(ipc_db: Arc<IpcDb>) -> Self {
-        Self { ipc_db }
-    }
-}
-
 #[async_trait]
 impl Tool for AgentsInboxTool {
     fn name(&self) -> &str {
@@ -383,12 +272,6 @@ impl Tool for AgentsInboxTool {
 /// Get a value from the shared key-value store.
 pub struct StateGetTool {
     ipc_db: Arc<IpcDb>,
-}
-
-impl StateGetTool {
-    pub(crate) fn new(ipc_db: Arc<IpcDb>) -> Self {
-        Self { ipc_db }
-    }
 }
 
 #[async_trait]
@@ -469,12 +352,6 @@ impl Tool for StateGetTool {
 pub struct StateSetTool {
     ipc_db: Arc<IpcDb>,
     security: Arc<SecurityPolicy>,
-}
-
-impl StateSetTool {
-    pub(crate) fn new(ipc_db: Arc<IpcDb>, security: Arc<SecurityPolicy>) -> Self {
-        Self { ipc_db, security }
-    }
 }
 
 #[async_trait]
@@ -844,30 +721,6 @@ mod tests {
         // so the tool count stays the same. Verify config defaults.
         assert!(!config.enabled);
         assert_eq!(config.staleness_secs, 300);
-    }
-
-    #[test]
-    fn real_open_derives_agent_id_from_workspace() {
-        let dir = TempDir::new().unwrap();
-        let workspace = dir.path().join("workspace");
-        std::fs::create_dir_all(&workspace).unwrap();
-        let db_path = dir.path().join("agents.db");
-
-        let config = AgentsIpcConfig {
-            enabled: true,
-            db_path: db_path.to_str().unwrap().to_string(),
-            staleness_secs: 300,
-        };
-
-        let db = IpcDb::open(&workspace, &config).unwrap();
-
-        // agent_id should be a 64-char hex SHA-256 hash
-        assert_eq!(db.agent_id().len(), 64);
-        assert!(db.agent_id().chars().all(|c| c.is_ascii_hexdigit()));
-
-        // Same workspace should produce same agent_id
-        let db2 = IpcDb::open(&workspace, &config).unwrap();
-        assert_eq!(db.agent_id(), db2.agent_id());
     }
 
     #[test]

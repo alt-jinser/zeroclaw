@@ -106,24 +106,6 @@ fn split_message_for_telegram(message: &str) -> Vec<String> {
     chunks
 }
 
-fn pick_uniform_index(len: usize) -> usize {
-    debug_assert!(len > 0);
-    let upper = len as u64;
-    let reject_threshold = (u64::MAX / upper) * upper;
-
-    loop {
-        let value = rand::random::<u64>();
-        if value < reject_threshold {
-            #[allow(clippy::cast_possible_truncation)]
-            return (value % upper) as usize;
-        }
-    }
-}
-
-fn random_telegram_ack_reaction() -> &'static str {
-    TELEGRAM_ACK_REACTIONS[pick_uniform_index(TELEGRAM_ACK_REACTIONS.len())]
-}
-
 fn build_telegram_ack_reaction_request(
     chat_id: &str,
     message_id: i64,
@@ -2093,49 +2075,6 @@ Allowlist Telegram username (without '@') or numeric user ID.",
         })
     }
 
-    /// Download a Telegram photo by file_id, resize to fit within 1024px, and return as base64 data URI.
-    async fn resolve_photo_data_uri(&self, file_id: &str) -> anyhow::Result<String> {
-        use base64::Engine as _;
-
-        // Step 1: call getFile to get file_path
-        let get_file_url = self.api_url(&format!("getFile?file_id={}", file_id));
-        let resp = self.http_client().get(&get_file_url).send().await?;
-        let json: serde_json::Value = resp.json().await?;
-        let file_path = json
-            .get("result")
-            .and_then(|r| r.get("file_path"))
-            .and_then(|p| p.as_str())
-            .ok_or_else(|| anyhow::anyhow!("getFile: no file_path in response"))?
-            .to_string();
-
-        // Step 2: download the actual file
-        let download_url = format!("{}/file/bot{}/{}", self.api_base, self.bot_token, file_path);
-        let img_resp = self.http_client().get(&download_url).send().await?;
-        let bytes = img_resp.bytes().await?;
-
-        // Step 3: resize to max 1024px on longest side to fit within model context
-        let resized_bytes = tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<u8>> {
-            let img = image::load_from_memory(&bytes)?;
-            let (w, h) = (img.width(), img.height());
-            let max_dim = 512u32;
-            let resized = if w > max_dim || h > max_dim {
-                img.thumbnail(max_dim, max_dim)
-            } else {
-                img
-            };
-            let mut buf = Vec::new();
-            resized.write_to(
-                &mut std::io::Cursor::new(&mut buf),
-                image::ImageFormat::Jpeg,
-            )?;
-            Ok(buf)
-        })
-        .await??;
-
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&resized_bytes);
-        Ok(format!("data:image/jpeg;base64,{}", b64))
-    }
-
     /// Convert Markdown to Telegram HTML format.
     /// Telegram HTML supports: <b>, <i>, <u>, <s>, <code>, <pre>, <a href="...">
     /// This mirrors OpenClaw's markdownToTelegramHtml approach.
@@ -3700,14 +3639,6 @@ mod tests {
     fn telegram_channel_name() {
         let ch = TelegramChannel::new("fake-token".into(), vec!["*".into()], false, true);
         assert_eq!(ch.name(), "telegram");
-    }
-
-    #[test]
-    fn random_telegram_ack_reaction_is_from_pool() {
-        for _ in 0..128 {
-            let emoji = random_telegram_ack_reaction();
-            assert!(TELEGRAM_ACK_REACTIONS.contains(&emoji));
-        }
     }
 
     #[test]

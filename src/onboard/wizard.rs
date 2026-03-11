@@ -146,14 +146,6 @@ enum InteractiveOnboardingMode {
     UpdateProviderOnly,
 }
 
-pub async fn run_wizard(force: bool) -> Result<Config> {
-    Box::pin(run_wizard_with_migration(
-        force,
-        OpenClawOnboardMigrationOptions::default(),
-    ))
-    .await
-}
-
 pub async fn run_wizard_with_migration(
     force: bool,
     migration_options: OpenClawOnboardMigrationOptions,
@@ -1001,15 +993,6 @@ fn allows_unauthenticated_model_fetch(provider_name: &str) -> bool {
             | "nvidia"
     )
 }
-
-/// Pick a sensible default model for the given provider.
-const MINIMAX_ONBOARD_MODELS: [(&str, &str); 5] = [
-    ("MiniMax-M2.5", "MiniMax M2.5 (latest, recommended)"),
-    ("MiniMax-M2.5-highspeed", "MiniMax M2.5 High-Speed (faster)"),
-    ("MiniMax-M2.1", "MiniMax M2.1 (stable)"),
-    ("MiniMax-M2.1-highspeed", "MiniMax M2.1 High-Speed (faster)"),
-    ("MiniMax-M2", "MiniMax M2 (legacy)"),
-];
 
 fn default_model_for_provider(provider: &str) -> String {
     if provider == "qwen-coding-plan" {

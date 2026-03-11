@@ -39,12 +39,6 @@ use async_trait::async_trait;
 use serde_json::Value;
 use std::path::Path;
 
-/// Maximum tool output size (1 MiB).
-const MAX_OUTPUT_BYTES: usize = 1_048_576;
-
-/// Wall-clock timeout for a single WASM invocation.
-const WASM_TIMEOUT_SECS: u64 = 30;
-
 // ─── Feature-gated implementation ─────────────────────────────────────────────
 
 #[cfg(all(

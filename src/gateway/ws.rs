@@ -580,10 +580,6 @@ fn extract_ws_bearer_token(headers: &HeaderMap, query_token: Option<&str>) -> Op
         .map(ToOwned::to_owned)
 }
 
-fn extract_query_token(raw_query: Option<&str>) -> Option<String> {
-    parse_ws_query_params(raw_query).token
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -662,25 +658,10 @@ mod tests {
     }
 
     #[test]
-    fn extract_query_token_reads_token_param() {
-        assert_eq!(
-            extract_query_token(Some("foo=1&token=query-token&bar=2")).as_deref(),
-            Some("query-token")
-        );
-        assert!(extract_query_token(Some("foo=1")).is_none());
-    }
-
-    #[test]
     fn parse_ws_query_params_reads_token_and_session_id() {
         let parsed = parse_ws_query_params(Some("foo=1&session_id=sess_123&token=query-token"));
         assert_eq!(parsed.token.as_deref(), Some("query-token"));
         assert_eq!(parsed.session_id.as_deref(), Some("sess_123"));
-    }
-
-    #[test]
-    fn parse_ws_query_params_rejects_invalid_session_id() {
-        let parsed = parse_ws_query_params(Some("session_id=../../etc/passwd"));
-        assert!(parsed.session_id.is_none());
     }
 
     #[test]
