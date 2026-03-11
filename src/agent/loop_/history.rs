@@ -51,7 +51,7 @@ const SECRET_SHELL_PATTERNS: &[&str] = &[
 /// Preserves the system prompt (first message if role=system) and the most recent messages.
 pub(super) fn trim_history(history: &mut Vec<ChatMessage>, max_history: usize) {
     // Nothing to trim if within limit
-    let has_system = history.first().map_or(false, |m| m.role == "system");
+    let has_system = history.first().is_some_and(|m| m.role == "system");
     let non_system_count = if has_system {
         history.len() - 1
     } else {
@@ -110,7 +110,7 @@ pub(super) async fn auto_compact_history(
     session_id: Option<&str>,
     post_turn_active: bool,
 ) -> Result<(bool, bool)> {
-    let has_system = history.first().map_or(false, |m| m.role == "system");
+    let has_system = history.first().is_some_and(|m| m.role == "system");
     let non_system_count = if has_system {
         history.len().saturating_sub(1)
     } else {

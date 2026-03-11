@@ -606,11 +606,10 @@ impl ApprovalManager {
         let mut rows = pending
             .values()
             .filter(|req| {
-                requested_by.map_or(true, |by| req.requested_by == by)
-                    && requested_channel.map_or(true, |channel| req.requested_channel == channel)
-                    && requested_reply_target.map_or(true, |reply_target| {
-                        req.requested_reply_target == reply_target
-                    })
+                requested_by.is_none_or(|by| req.requested_by == by)
+                    && requested_channel.is_none_or(|channel| req.requested_channel == channel)
+                    && requested_reply_target
+                        .is_none_or(|reply_target| req.requested_reply_target == reply_target)
             })
             .cloned()
             .collect::<Vec<_>>();

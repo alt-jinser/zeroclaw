@@ -698,7 +698,7 @@ impl GeminiProvider {
         // Refresh if expiry is unknown, already expired, or within 60s of expiry.
         let needs_refresh = guard
             .expiry_millis
-            .map_or(true, |exp| exp <= now_millis.saturating_add(60_000));
+            .is_none_or(|exp| exp <= now_millis.saturating_add(60_000));
 
         if needs_refresh {
             if let Some(ref refresh_token) = guard.refresh_token {

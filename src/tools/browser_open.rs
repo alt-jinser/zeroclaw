@@ -27,7 +27,7 @@ pub enum BrowserChoice {
 
 impl BrowserChoice {
     /// Parse from config string
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_str_infallible(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "disable" => Self::Disable,
             "brave" => Self::Brave,
@@ -703,17 +703,50 @@ mod tests {
 
     #[test]
     fn browser_choice_from_str() {
-        assert_eq!(BrowserChoice::from_str("disable"), BrowserChoice::Disable);
-        assert_eq!(BrowserChoice::from_str("Disable"), BrowserChoice::Disable);
-        assert_eq!(BrowserChoice::from_str("DISABLE"), BrowserChoice::Disable);
-        assert_eq!(BrowserChoice::from_str("brave"), BrowserChoice::Brave);
-        assert_eq!(BrowserChoice::from_str("chrome"), BrowserChoice::Chrome);
-        assert_eq!(BrowserChoice::from_str("firefox"), BrowserChoice::Firefox);
-        assert_eq!(BrowserChoice::from_str("edge"), BrowserChoice::Edge);
-        assert_eq!(BrowserChoice::from_str("msedge"), BrowserChoice::Edge);
-        assert_eq!(BrowserChoice::from_str("default"), BrowserChoice::Default);
-        assert_eq!(BrowserChoice::from_str(""), BrowserChoice::Default);
-        assert_eq!(BrowserChoice::from_str("unknown"), BrowserChoice::Disable);
+        assert_eq!(
+            BrowserChoice::from_str_infallible("disable"),
+            BrowserChoice::Disable
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("Disable"),
+            BrowserChoice::Disable
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("DISABLE"),
+            BrowserChoice::Disable
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("brave"),
+            BrowserChoice::Brave
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("chrome"),
+            BrowserChoice::Chrome
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("firefox"),
+            BrowserChoice::Firefox
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("edge"),
+            BrowserChoice::Edge
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("msedge"),
+            BrowserChoice::Edge
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("default"),
+            BrowserChoice::Default
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible(""),
+            BrowserChoice::Default
+        );
+        assert_eq!(
+            BrowserChoice::from_str_infallible("unknown"),
+            BrowserChoice::Disable
+        );
     }
 
     #[test]

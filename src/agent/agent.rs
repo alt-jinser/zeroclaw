@@ -70,6 +70,12 @@ pub struct AgentBuilder {
     research_config: Option<ResearchPhaseConfig>,
 }
 
+impl Default for AgentBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AgentBuilder {
     pub fn new() -> Self {
         Self {

@@ -272,7 +272,7 @@ impl HardwareRag {
             }
 
             if score > 0.0 {
-                let board_match = chunk.board.as_ref().map_or(false, |b| boards.contains(b));
+                let board_match = chunk.board.as_ref().is_some_and(|b| boards.contains(b));
                 if board_match {
                     score += 2.0;
                 }

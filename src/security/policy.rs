@@ -74,6 +74,12 @@ pub struct ActionTracker {
     actions: Mutex<Vec<Instant>>,
 }
 
+impl Default for ActionTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ActionTracker {
     pub fn new() -> Self {
         Self {

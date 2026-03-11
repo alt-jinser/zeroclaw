@@ -78,7 +78,7 @@ pub struct PluginManifest {
 /// Result of attempting to load a manifest from a directory.
 pub enum ManifestLoadResult {
     Ok {
-        manifest: PluginManifest,
+        manifest: Box<PluginManifest>,
         path: std::path::PathBuf,
     },
     Err {
@@ -114,7 +114,7 @@ pub fn load_manifest(root_dir: &Path) -> ManifestLoadResult {
                 };
             }
             ManifestLoadResult::Ok {
-                manifest,
+                manifest: Box::new(manifest),
                 path: manifest_path,
             }
         }

@@ -43,7 +43,7 @@ fn scan_dir(dir: &Path, origin: PluginOrigin) -> (Vec<DiscoveredPlugin>, Vec<Plu
         if entry
             .file_name()
             .to_str()
-            .map_or(false, |n| n.starts_with('.'))
+            .is_some_and(|n| n.starts_with('.'))
         {
             continue;
         }
@@ -55,7 +55,7 @@ fn scan_dir(dir: &Path, origin: PluginOrigin) -> (Vec<DiscoveredPlugin>, Vec<Plu
         match load_manifest(&path) {
             ManifestLoadResult::Ok { manifest, .. } => {
                 plugins.push(DiscoveredPlugin {
-                    manifest,
+                    manifest: *manifest,
                     dir: path,
                     origin: origin.clone(),
                 });

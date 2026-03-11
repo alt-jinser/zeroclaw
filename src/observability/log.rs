@@ -5,6 +5,12 @@ use tracing::info;
 /// Log-based observer — uses tracing, zero external deps
 pub struct LogObserver;
 
+impl Default for LogObserver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LogObserver {
     pub fn new() -> Self {
         Self

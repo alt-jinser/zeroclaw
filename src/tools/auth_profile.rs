@@ -44,10 +44,7 @@ impl ManageAuthProfileTool {
             }
 
             count += 1;
-            let is_active = data
-                .active_profiles
-                .get(&profile.provider)
-                .map_or(false, |active| active == id);
+            let is_active = data.active_profiles.get(&profile.provider) == Some(id);
 
             let active_marker = if is_active { " [ACTIVE]" } else { "" };
             let _ = writeln!(

@@ -7,6 +7,12 @@ use std::any::Any;
 /// prompt contents. It is intended to be opt-in (e.g. `--verbose`).
 pub struct VerboseObserver;
 
+impl Default for VerboseObserver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VerboseObserver {
     pub fn new() -> Self {
         Self

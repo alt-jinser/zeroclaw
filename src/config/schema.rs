@@ -5362,9 +5362,7 @@ fn redact_url_userinfo_for_debug(raw: &str) -> String {
 
     let auth_start = scheme_idx + 3;
     let rest = &raw[auth_start..];
-    let auth_end_rel = rest
-        .find(|c| c == '/' || c == '?' || c == '#')
-        .unwrap_or(rest.len());
+    let auth_end_rel = rest.find(['/', '?', '#']).unwrap_or(rest.len());
     let authority = &rest[..auth_end_rel];
 
     let Some(at) = authority.rfind('@') else {
@@ -7737,9 +7735,11 @@ impl Config {
             );
             Ok(config)
         } else {
-            let mut config = Config::default();
-            config.config_path = config_path.clone();
-            config.workspace_dir = workspace_dir;
+            let mut config = Config {
+                config_path: config_path.clone(),
+                workspace_dir,
+                ..Default::default()
+            };
             config.save().await?;
 
             // Restrict permissions on newly created config file (may contain API keys)
@@ -8741,9 +8741,9 @@ impl Config {
         for left_index in 0..custom_auth_headers_by_base_url.len() {
             let (left_profile, left_url, left_header) =
                 &custom_auth_headers_by_base_url[left_index];
-            for right_index in (left_index + 1)..custom_auth_headers_by_base_url.len() {
-                let (right_profile, right_url, right_header) =
-                    &custom_auth_headers_by_base_url[right_index];
+            for (right_profile, right_url, right_header) in
+                custom_auth_headers_by_base_url.iter().skip(left_index + 1)
+            {
                 if Self::urls_match_ignoring_trailing_slash(left_url, right_url)
                     && !left_header.eq_ignore_ascii_case(right_header)
                 {
@@ -8861,7 +8861,7 @@ impl Config {
                 self.api_key = Some(key);
                 has_explicit_zeroclaw_api_key = true;
             }
-        } else if self.api_key.as_ref().map_or(true, |k| k.is_empty()) {
+        } else if self.api_key.as_ref().is_none_or(|k| k.is_empty()) {
             if let Ok(key) = std::env::var("API_KEY") {
                 if !key.is_empty() {
                     self.api_key = Some(key);
@@ -8906,7 +8906,7 @@ impl Config {
             }
         } else if let Ok(provider) = std::env::var("PROVIDER") {
             let should_apply_legacy_provider =
-                self.default_provider.as_deref().map_or(true, |configured| {
+                self.default_provider.as_deref().is_none_or(|configured| {
                     configured
                         .trim()
                         .eq_ignore_ascii_case(DEFAULT_PROVIDER_NAME)

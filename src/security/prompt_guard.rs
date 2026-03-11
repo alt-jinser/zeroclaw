@@ -40,7 +40,7 @@ pub enum GuardAction {
 }
 
 impl GuardAction {
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_str_infallible(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "block" => Self::Block,
             "sanitize" => Self::Sanitize,

@@ -22,6 +22,12 @@ use tokio::process::Command;
 /// - It is intentionally narrow: patch in, apply/check, status/commit out.
 pub struct ApplyPatchTool;
 
+impl Default for ApplyPatchTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ApplyPatchTool {
     pub fn new() -> Self {
         Self

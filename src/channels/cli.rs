@@ -6,6 +6,12 @@ use uuid::Uuid;
 /// CLI channel — stdin/stdout, always available, zero deps
 pub struct CliChannel;
 
+impl Default for CliChannel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CliChannel {
     pub fn new() -> Self {
         Self

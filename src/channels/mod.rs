@@ -2301,6 +2301,7 @@ async fn handle_runtime_command_if_needed(
     /// - Grant session and persistent runtime grants
     /// - Persist to config
     /// - Clear exclusions
+    ///
     /// Returns the approval success message.
     async fn handle_confirm_tool_approval_side_effects(
         ctx: &ChannelRuntimeContext,
@@ -3674,7 +3675,7 @@ or tune thresholds in config.",
         channel = %msg.channel,
         has_target_channel = target_channel.is_some(),
         use_streaming,
-        supports_draft = target_channel.as_ref().map_or(false, |ch| ch.supports_draft_updates()),
+        supports_draft = target_channel.as_ref().is_some_and(|ch| ch.supports_draft_updates()),
         "Draft streaming decision"
     );
 

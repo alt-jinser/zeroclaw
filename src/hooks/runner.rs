@@ -18,18 +18,12 @@ use super::traits::{HookHandler, HookResult};
 /// Void hooks are dispatched in parallel via `join_all`.
 /// Modifying hooks run sequentially by priority (higher first), piping output
 /// and short-circuiting on `Cancel`.
+#[derive(Default)]
 pub struct HookRunner {
     handlers: Vec<Box<dyn HookHandler>>,
 }
 
 impl HookRunner {
-    /// Create an empty runner with no handlers.
-    pub fn new() -> Self {
-        Self {
-            handlers: Vec::new(),
-        }
-    }
-
     /// Build a hook runner from configuration, registering enabled built-in hooks.
     ///
     /// Returns `None` if hooks are disabled in config.
@@ -37,7 +31,7 @@ impl HookRunner {
         if !config.enabled {
             return None;
         }
-        let mut runner = Self::new();
+        let mut runner = Self::default();
         if config.builtin.boot_script {
             runner.register(Box::new(super::builtin::BootScriptHook));
         }

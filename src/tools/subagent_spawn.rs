@@ -56,10 +56,12 @@ impl SubAgentSpawnTool {
         auto_activate: bool,
         runtime_config_path: Option<PathBuf>,
     ) -> Self {
-        let mut subagent_settings = SubAgentsConfig::default();
-        subagent_settings.enabled = subagents_enabled;
-        subagent_settings.max_concurrent = max_concurrent_subagents.max(1);
-        subagent_settings.auto_activate = auto_activate;
+        let subagent_settings = SubAgentsConfig {
+            enabled: subagents_enabled,
+            max_concurrent: max_concurrent_subagents.max(1),
+            auto_activate,
+            ..Default::default()
+        };
 
         Self {
             agents: Arc::new(agents),

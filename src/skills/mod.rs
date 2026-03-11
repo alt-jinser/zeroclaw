@@ -2443,7 +2443,7 @@ pub fn handle_command(command: crate::SkillCommands, config: &crate::config::Con
                 let source_path = std::path::Path::new(&source);
                 let is_local_zip = source_path
                     .extension()
-                    .map_or(false, |e| e.eq_ignore_ascii_case("zip"))
+                    .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
                     && source_path.is_file();
 
                 if is_local_zip {

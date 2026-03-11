@@ -564,6 +564,12 @@ pub struct BedrockProvider {
     credentials: CachedCredentials,
 }
 
+impl Default for BedrockProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BedrockProvider {
     pub fn new() -> Self {
         Self {

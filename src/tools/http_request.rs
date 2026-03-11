@@ -10,6 +10,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+type Headers = Vec<(String, String)>;
+
 /// HTTP request tool for API interactions.
 /// Supports GET, POST, PUT, DELETE methods with configurable security.
 pub struct HttpRequestTool {
@@ -145,7 +147,7 @@ impl HttpRequestTool {
         }
     }
 
-    fn parse_headers(&self, headers: &serde_json::Value) -> Vec<(String, String)> {
+    fn parse_headers(&self, headers: &serde_json::Value) -> Headers {
         let mut result = Vec::new();
         if let Some(obj) = headers.as_object() {
             for (key, value) in obj {
@@ -160,7 +162,7 @@ impl HttpRequestTool {
     fn resolve_credential_profile(
         &self,
         profile_name: &str,
-    ) -> anyhow::Result<(Vec<(String, String)>, Vec<String>)> {
+    ) -> anyhow::Result<(Headers, Vec<String>)> {
         let requested_name = profile_name.trim();
         if requested_name.is_empty() {
             anyhow::bail!("credential_profile must not be empty");
@@ -240,7 +242,7 @@ impl HttpRequestTool {
         &self,
         url: &str,
         method: reqwest::Method,
-        headers: Vec<(String, String)>,
+        headers: Headers,
         body: Option<&str>,
     ) -> anyhow::Result<reqwest::Response> {
         let timeout_secs = if self.timeout_secs == 0 {

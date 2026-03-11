@@ -132,6 +132,12 @@ fn missing_shell_error() -> &'static str {
     }
 }
 
+impl Default for NativeRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NativeRuntime {
     pub fn new() -> Self {
         Self {

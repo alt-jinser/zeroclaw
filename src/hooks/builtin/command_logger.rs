@@ -10,6 +10,12 @@ pub struct CommandLoggerHook {
     log: Arc<Mutex<Vec<String>>>,
 }
 
+impl Default for CommandLoggerHook {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CommandLoggerHook {
     pub fn new() -> Self {
         Self {
