@@ -46,6 +46,8 @@ pub mod util;
 
 pub use config::Config;
 
+pub const ZEROCLAW_BUILD_VERSION: &str = env!("ZEROCLAW_BUILD_VERSION");
+
 /// Service management subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ServiceCommands {
