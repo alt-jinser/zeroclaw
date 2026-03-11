@@ -49,7 +49,6 @@ impl GitOperationsTool {
         Ok(result)
     }
 
-    /// Check if an operation requires write access
     fn requires_write_access(&self, operation: &str) -> bool {
         matches!(
             operation,
