@@ -3,6 +3,7 @@
 
 use anyhow::{bail, Context, Result};
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::Shell;
 use dialoguer::{Input, Password};
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -86,20 +87,6 @@ pub use zeroclaw::{
     ChannelCommands, CronCommands, HardwareCommands, IntegrationCommands, MigrateCommands,
     PeripheralCommands, ServiceCommands, SkillCommands,
 };
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
-enum CompletionShell {
-    #[value(name = "bash")]
-    Bash,
-    #[value(name = "fish")]
-    Fish,
-    #[value(name = "zsh")]
-    Zsh,
-    #[value(name = "powershell")]
-    PowerShell,
-    #[value(name = "elvish")]
-    Elvish,
-}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
 enum EstopLevelArg {
@@ -557,7 +544,7 @@ Examples:
     Completions {
         /// Target shell
         #[arg(value_enum)]
-        shell: CompletionShell,
+        shell: Shell,
     },
 }
 
@@ -1570,22 +1557,11 @@ fn print_estop_status(state: &security::EstopState) {
     }
 }
 
-fn write_shell_completion<W: Write>(shell: CompletionShell, writer: &mut W) -> Result<()> {
-    use clap_complete::generate;
-    use clap_complete::shells;
-
+fn write_shell_completion<W: Write>(generator: Shell, writer: &mut W) -> Result<()> {
     let mut cmd = Cli::command();
-    let bin_name = cmd.get_name().to_string();
+    let bin_name = cmd.get_name().to_owned();
 
-    match shell {
-        CompletionShell::Bash => generate(shells::Bash, &mut cmd, bin_name.clone(), writer),
-        CompletionShell::Fish => generate(shells::Fish, &mut cmd, bin_name.clone(), writer),
-        CompletionShell::Zsh => generate(shells::Zsh, &mut cmd, bin_name.clone(), writer),
-        CompletionShell::PowerShell => {
-            generate(shells::PowerShell, &mut cmd, bin_name.clone(), writer);
-        }
-        CompletionShell::Elvish => generate(shells::Elvish, &mut cmd, bin_name, writer),
-    }
+    clap_complete::generate(generator, &mut cmd, bin_name, writer);
 
     writer.flush()?;
     Ok(())
