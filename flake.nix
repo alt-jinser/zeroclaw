@@ -53,5 +53,11 @@
           inherit (self.packages.${final.system}) zeroclaw zeroclaw-web;
         }
       );
+
+      nixosModules = {
+        default = self.nixosModules.zeroclaw;
+        zeroclaw = ./nixos/module.nix;
+      };
+
     };
 }
