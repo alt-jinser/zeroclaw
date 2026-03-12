@@ -74,7 +74,7 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
                 Command::Providers => providers::run(&config),
                 Command::ProvidersQuota(args) => providers_quota::run(args, config).await,
                 Command::Channel(args) => channel::run(args, config).await,
-                Command::Integrations(args) => integrations::run(args, config).await,
+                Command::Integrations(args) => integrations::run(args, &config).await,
                 Command::Skills(args) => skills::run(args, &config),
                 Command::Migrate(args) => migrate::run(args, &config).await,
                 Command::Auth(args) => auth::run(args, &config).await,

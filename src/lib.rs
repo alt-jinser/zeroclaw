@@ -48,55 +48,6 @@ pub use config::Config;
 
 pub const ZEROCLAW_BUILD_VERSION: &str = env!("ZEROCLAW_BUILD_VERSION");
 
-/// Channel management subcommands
-#[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ChannelCommands {
-    /// List all configured channels
-    List,
-    /// Start all configured channels (handled in main.rs for async)
-    Start,
-    /// Run health checks for configured channels (handled in main.rs for async)
-    Doctor,
-    /// Add a new channel configuration
-    #[command(long_about = "\
-Add a new channel configuration.
-
-Provide the channel type and a JSON object with the required \
-configuration keys for that channel type.
-
-Supported types: telegram, discord, slack, whatsapp, github, matrix, imessage, email.
-
-Examples:
-  zeroclaw channel add telegram '{\"bot_token\":\"...\",\"name\":\"my-bot\"}'
-  zeroclaw channel add discord '{\"bot_token\":\"...\",\"name\":\"my-discord\"}'")]
-    Add {
-        /// Channel type (telegram, discord, slack, whatsapp, github, matrix, imessage, email)
-        channel_type: String,
-        /// Optional configuration as JSON
-        config: String,
-    },
-    /// Remove a channel configuration
-    Remove {
-        /// Channel name to remove
-        name: String,
-    },
-    /// Bind a Telegram identity (username or numeric user ID) into allowlist
-    #[command(long_about = "\
-Bind a Telegram identity into the allowlist.
-
-Adds a Telegram username (without the '@' prefix) or numeric user \
-ID to the channel allowlist so the agent will respond to messages \
-from that identity.
-
-Examples:
-  zeroclaw channel bind-telegram zeroclaw_user
-  zeroclaw channel bind-telegram 123456789")]
-    BindTelegram {
-        /// Telegram identity to allow (username without '@' or numeric user ID)
-        identity: String,
-    },
-}
-
 /// Skills management subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SkillCommands {
@@ -212,30 +163,6 @@ pub enum MemoryCommands {
         /// Show progress during reindex
         #[arg(long, default_value = "true")]
         progress: bool,
-    },
-}
-
-/// Integration subcommands
-#[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum IntegrationCommands {
-    /// List all integrations (optionally filter by category or status)
-    List {
-        /// Filter by category (e.g. "chat", "ai", "productivity")
-        #[arg(long, short)]
-        category: Option<String>,
-        /// Filter by status: active, available, coming-soon
-        #[arg(long, short)]
-        status: Option<String>,
-    },
-    /// Search integrations by keyword (matches name and description)
-    Search {
-        /// Search query
-        query: String,
-    },
-    /// Show details about a specific integration
-    Info {
-        /// Integration name
-        name: String,
     },
 }
 

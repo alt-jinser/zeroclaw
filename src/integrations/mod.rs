@@ -66,17 +66,6 @@ pub struct IntegrationEntry {
     pub status_fn: fn(&Config) -> IntegrationStatus,
 }
 
-/// Handle the `integrations` CLI command
-pub fn handle_command(command: crate::IntegrationCommands, config: &Config) -> Result<()> {
-    match command {
-        crate::IntegrationCommands::List { category, status } => {
-            list_integrations(config, category.as_deref(), status.as_deref())
-        }
-        crate::IntegrationCommands::Search { query } => search_integrations(config, &query),
-        crate::IntegrationCommands::Info { name } => show_integration_info(config, &name),
-    }
-}
-
 fn status_icon(status: IntegrationStatus) -> &'static str {
     match status {
         IntegrationStatus::Active => "✅",
@@ -109,7 +98,7 @@ fn parse_status_filter(input: &str) -> Option<IntegrationStatus> {
     }
 }
 
-fn list_integrations(
+pub fn list_integrations(
     config: &Config,
     category_filter: Option<&str>,
     status_filter: Option<&str>,
@@ -178,7 +167,7 @@ fn list_integrations(
     Ok(())
 }
 
-fn search_integrations(config: &Config, query: &str) -> Result<()> {
+pub fn search_integrations(config: &Config, query: &str) -> Result<()> {
     let entries = registry::all_integrations();
     let query_lower = query.to_lowercase();
 
@@ -214,7 +203,7 @@ fn search_integrations(config: &Config, query: &str) -> Result<()> {
     Ok(())
 }
 
-fn show_integration_info(config: &Config, name: &str) -> Result<()> {
+pub fn show_integration_info(config: &Config, name: &str) -> Result<()> {
     let entries = registry::all_integrations();
     let name_lower = name.to_lowercase();
 

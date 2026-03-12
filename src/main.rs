@@ -8,10 +8,7 @@ use tracing_subscriber::{fmt, EnvFilter};
 mod cmd;
 
 // Re-export so binary modules can use crate::<CommandEnum> while keeping a single source of truth.
-pub use zeroclaw::{
-    HardwareCommands, IntegrationCommands, MigrateCommands, PeripheralCommands,
-    SkillCommands,
-};
+pub use zeroclaw::{HardwareCommands, MigrateCommands, PeripheralCommands, SkillCommands};
 
 use crate::cmd::Cli;
 
