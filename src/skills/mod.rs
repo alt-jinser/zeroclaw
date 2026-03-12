@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-mod audit;
-mod templates;
+pub mod audit;
+pub mod templates;
 mod tool_handler;
 
 pub use tool_handler::SkillToolHandler;
@@ -115,7 +115,7 @@ pub fn load_skills_with_config(workspace_dir: &Path, config: &crate::config::Con
     )
 }
 
-fn load_skills_full_with_config(
+pub fn load_skills_full_with_config(
     workspace_dir: &Path,
     config: &crate::config::Config,
 ) -> Vec<Skill> {
@@ -167,7 +167,7 @@ fn load_workspace_skills(
     load_skills_from_directory(&skills_dir, allow_scripts, trusted_skill_roots, load_mode)
 }
 
-fn resolve_trusted_skill_roots(workspace_dir: &Path, raw_roots: &[String]) -> Vec<PathBuf> {
+pub fn resolve_trusted_skill_roots(workspace_dir: &Path, raw_roots: &[String]) -> Vec<PathBuf> {
     let home_dir = UserDirs::new().map(|dirs| dirs.home_dir().to_path_buf());
     let mut resolved = Vec::new();
 
@@ -217,7 +217,7 @@ fn resolve_trusted_skill_roots(workspace_dir: &Path, raw_roots: &[String]) -> Ve
     resolved
 }
 
-fn enforce_workspace_skill_symlink_trust(
+pub fn enforce_workspace_skill_symlink_trust(
     path: &Path,
     trusted_skill_roots: &[PathBuf],
 ) -> Result<()> {
@@ -996,7 +996,7 @@ pub fn init_skills_dir(workspace_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn is_git_source(source: &str) -> bool {
+pub fn is_git_source(source: &str) -> bool {
     is_git_scheme_source(source, "https://")
         || is_git_scheme_source(source, "http://")
         || is_git_scheme_source(source, "ssh://")
@@ -1142,7 +1142,7 @@ fn copy_dir_recursive_secure(src: &Path, dest: &Path) -> Result<()> {
     Ok(())
 }
 
-fn install_local_skill_source(
+pub fn install_local_skill_source(
     source: &str,
     skills_path: &Path,
     allow_scripts: bool,
@@ -1179,7 +1179,7 @@ fn install_local_skill_source(
     }
 }
 
-fn install_git_skill_source(
+pub fn install_git_skill_source(
     source: &str,
     skills_path: &Path,
     allow_scripts: bool,
@@ -1505,7 +1505,7 @@ fn resolve_wasm_path(
 
 /// Package reference format: `<namespace>/<name>[@<version>]`
 /// Example: `zeromarket/github-pr-summary` or `acme/my-tool@0.2.1`
-fn is_registry_source(source: &str) -> bool {
+pub fn is_registry_source(source: &str) -> bool {
     // Filesystem paths are never registry sources
     if source.starts_with('.') || source.starts_with('/') || source.starts_with('~') {
         return false;
@@ -1557,7 +1557,7 @@ fn is_registry_source(source: &str) -> bool {
 /// 2. Creates `skills_path/<name>/tools/<tool-name>/`
 /// 3. Downloads `tool.wasm` and `manifest.json` for each tool
 /// 4. Creates a minimal `SKILL.toml` so the skill shows up in `skill list`
-fn install_registry_skill_source(
+pub fn install_registry_skill_source(
     source: &str,
     skills_path: &Path,
     registry_url: &str,
@@ -1847,7 +1847,7 @@ fn parse_clawhub_url(source: &str) -> Option<reqwest::Url> {
 }
 
 /// Returns true if `source` is a ClawhHub skill reference.
-fn is_clawhub_source(source: &str) -> bool {
+pub fn is_clawhub_source(source: &str) -> bool {
     if source.starts_with("clawhub:") {
         return true;
     }
@@ -1863,7 +1863,7 @@ fn is_clawhub_source(source: &str) -> bool {
 ///
 /// For profile URLs the full path (owner/slug) is forwarded verbatim as the slug query
 /// parameter so the ClawhHub API can resolve owner-namespaced skills correctly.
-fn clawhub_download_url(source: &str) -> Result<String> {
+pub fn clawhub_download_url(source: &str) -> Result<String> {
     // Short prefix: clawhub:<slug>
     if let Some(slug) = source.strip_prefix("clawhub:") {
         let slug = slug.trim().trim_end_matches('/');
@@ -1910,7 +1910,7 @@ fn clawhub_download_url(source: &str) -> Result<String> {
 // name is derived from the URL's last path segment.
 
 /// Returns true if `source` should be handled as a zip-URL download.
-fn is_zip_url_source(source: &str) -> bool {
+pub fn is_zip_url_source(source: &str) -> bool {
     // Explicit `zip:https://...` prefix
     if let Some(rest) = source.strip_prefix("zip:") {
         return rest.starts_with("https://");
@@ -1921,7 +1921,7 @@ fn is_zip_url_source(source: &str) -> bool {
 }
 
 /// Strips the `zip:` prefix if present, returning the bare HTTPS URL.
-fn zip_url_from_source(source: &str) -> &str {
+pub fn zip_url_from_source(source: &str) -> &str {
     source.strip_prefix("zip:").unwrap_or(source)
 }
 
@@ -1987,7 +1987,7 @@ fn extract_zip_skill_meta(
 /// Install a skill from a local `.zip` file (e.g. downloaded manually from ClawhHub).
 ///
 /// Usage: `zeroclaw skill install /path/to/skill.zip`
-fn install_local_zip_source(zip_path: &Path, skills_path: &Path) -> Result<(PathBuf, usize)> {
+pub fn install_local_zip_source(zip_path: &Path, skills_path: &Path) -> Result<(PathBuf, usize)> {
     let bytes = std::fs::read(zip_path)
         .with_context(|| format!("failed to read zip file: {}", zip_path.display()))?;
     let hint = zip_path
@@ -2002,7 +2002,7 @@ fn install_local_zip_source(zip_path: &Path, skills_path: &Path) -> Result<(Path
 /// `auth_token` is an optional Bearer token added as `Authorization: Bearer <token>`.
 /// Extraction is done in-process (no `unzip` binary required).
 /// Returns the installed skill directory path and the number of files written.
-fn install_zip_url_source(
+pub fn install_zip_url_source(
     url: &str,
     skills_path: &Path,
     auth_token: Option<&str>,
@@ -2175,366 +2175,6 @@ fn fetch_url_blocking(url: &str, auth_token: Option<&str>) -> Result<Vec<u8>> {
     }
 
     Ok(body)
-}
-
-// ─── Handle command ───────────────────────────────────────────────────────────
-
-/// Handle the `skills` CLI command
-#[allow(clippy::too_many_lines)]
-pub fn handle_command(command: crate::SkillCommands, config: &crate::config::Config) -> Result<()> {
-    let workspace_dir = &config.workspace_dir;
-    match command {
-        crate::SkillCommands::New { name, template } => {
-            let dest = std::env::current_dir().unwrap_or_else(|_| workspace_dir.clone());
-
-            scaffold_skill(&name, &template, &dest)
-                .with_context(|| format!("failed to scaffold skill '{name}'"))?;
-
-            // Resolve template again for display (find is cheap; scaffold_skill already
-            // validated that the template exists, so this should never be None).
-            let tmpl = templates::find(&template).ok_or_else(|| {
-                anyhow::anyhow!("template '{}' not found after scaffold", template)
-            })?;
-
-            let skill_dir = dest.join(&name);
-            println!(
-                "  {} Skill '{}' created at {}",
-                console::style("✓").green().bold(),
-                name,
-                skill_dir.display()
-            );
-            println!(
-                "  Template: {} ({})",
-                console::style(tmpl.name).cyan(),
-                tmpl.language
-            );
-            println!();
-            println!("  Next steps:");
-            println!("    cd {name}");
-            match tmpl.language {
-                "typescript" => {
-                    println!("    npm install && npm run build   # → tool.wasm");
-                }
-                "rust" => {
-                    println!(
-                        "    {}  # one-time setup",
-                        console::style("rustup target add wasm32-wasip1").yellow()
-                    );
-                    println!("    cargo build --target wasm32-wasip1 --release");
-                    println!("    cp target/wasm32-wasip1/release/*.wasm tool.wasm");
-                }
-                "go" => {
-                    println!("    tinygo build -o tool.wasm -target wasi .");
-                }
-                "python" => {
-                    println!("    pip install componentize-py");
-                    println!("    componentize-py -d wit/ -w zeroclaw-skill componentize main -o tool.wasm");
-                }
-                _ => {}
-            }
-            println!("    zeroclaw skill test . --args '{}'", tmpl.test_args);
-            println!();
-            println!(
-                "  {} 'zeroclaw skill test' requires the {} CLI:",
-                console::style("Note:").dim(),
-                console::style("wasmtime").cyan()
-            );
-            println!(
-                "    macOS:       {}",
-                console::style("brew install wasmtime").yellow()
-            );
-            println!(
-                "    Linux/macOS: {}",
-                console::style("curl https://wasmtime.dev/install.sh -sSf | bash").yellow()
-            );
-            println!();
-            println!(
-                "  To publish: upload this folder to {}",
-                console::style("https://zeromarket.dev/upload").underlined()
-            );
-
-            Ok(())
-        }
-
-        crate::SkillCommands::Test { path, tool, args } => {
-            let skill_path = std::path::Path::new(&path);
-            let skill_path = if skill_path.is_absolute() {
-                skill_path.to_path_buf()
-            } else {
-                std::env::current_dir()
-                    .unwrap_or_else(|_| workspace_dir.clone())
-                    .join(skill_path)
-            };
-
-            // If `path` is just a skill name, resolve from installed skills dir
-            let skill_path = if !skill_path.exists() && !path.contains('/') && !path.contains('\\')
-            {
-                skills_dir(workspace_dir).join(&path)
-            } else {
-                skill_path
-            };
-
-            if !skill_path.exists() {
-                anyhow::bail!(
-                    "Skill path not found: {}\n\
-                     Tip: run from the skill directory or pass an absolute path.",
-                    skill_path.display()
-                );
-            }
-
-            let args_json = args.as_deref().unwrap_or("{\"input\":\"test\"}");
-
-            test_skill_locally(&skill_path, tool.as_deref(), args_json)
-                .with_context(|| format!("skill test failed for {}", skill_path.display()))?;
-
-            Ok(())
-        }
-
-        crate::SkillCommands::List => {
-            let skills = load_skills_full_with_config(workspace_dir, config);
-            if skills.is_empty() {
-                println!("No skills installed.");
-                println!();
-                println!("  Create one: mkdir -p ~/.zeroclaw/workspace/skills/my-skill");
-                println!("              echo '# My Skill' > ~/.zeroclaw/workspace/skills/my-skill/SKILL.md");
-                println!();
-                println!("  Or install: zeroclaw skills install <source>");
-            } else {
-                println!("Installed skills ({}):", skills.len());
-                println!();
-                for skill in &skills {
-                    println!(
-                        "  {} {} — {}",
-                        console::style(&skill.name).white().bold(),
-                        console::style(format!("v{}", skill.version)).dim(),
-                        skill.description
-                    );
-                    if !skill.tools.is_empty() {
-                        println!(
-                            "    Tools: {}",
-                            skill
-                                .tools
-                                .iter()
-                                .map(|t| t.name.as_str())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        );
-                    }
-                    if !skill.tags.is_empty() {
-                        println!("    Tags:  {}", skill.tags.join(", "));
-                    }
-                }
-            }
-            println!();
-            Ok(())
-        }
-        crate::SkillCommands::Audit { source } => {
-            let source_path = PathBuf::from(&source);
-            let target = if source_path.exists() {
-                source_path
-            } else {
-                skills_dir(workspace_dir).join(&source)
-            };
-
-            if !target.exists() {
-                anyhow::bail!("Skill source or installed skill not found: {source}");
-            }
-
-            let trusted_skill_roots =
-                resolve_trusted_skill_roots(workspace_dir, &config.skills.trusted_skill_roots);
-            if let Ok(metadata) = std::fs::symlink_metadata(&target) {
-                if metadata.file_type().is_symlink() {
-                    enforce_workspace_skill_symlink_trust(&target, &trusted_skill_roots)
-                        .with_context(|| {
-                            format!(
-                                "trusted-symlink policy rejected audit target {}",
-                                target.display()
-                            )
-                        })?;
-                }
-            }
-
-            let report = audit::audit_skill_directory_with_options(
-                &target,
-                audit::SkillAuditOptions {
-                    allow_scripts: config.skills.allow_scripts,
-                },
-            )?;
-            if report.is_clean() {
-                println!(
-                    "  {} Skill audit passed for {} ({} files scanned).",
-                    console::style("✓").green().bold(),
-                    target.display(),
-                    report.files_scanned
-                );
-                return Ok(());
-            }
-
-            println!(
-                "  {} Skill audit failed for {}",
-                console::style("✗").red().bold(),
-                target.display()
-            );
-            for finding in report.findings {
-                println!("    - {finding}");
-            }
-            anyhow::bail!("Skill audit failed.");
-        }
-        crate::SkillCommands::Install { source } => {
-            println!("Installing skill from: {source}");
-
-            let skills_path = skills_dir(workspace_dir);
-            std::fs::create_dir_all(&skills_path)?;
-
-            if is_clawhub_source(&source) {
-                let download_url = clawhub_download_url(&source)
-                    .with_context(|| format!("invalid ClawhHub source: {source}"))?;
-                let token = config.skills.clawhub_token.as_deref();
-                let (installed_dir, files_written) =
-                    install_zip_url_source(&download_url, &skills_path, token)
-                        .with_context(|| format!("failed to install ClawhHub skill: {source}"))?;
-                println!(
-                    "  {} ClawhHub skill installed: {} ({} files written)",
-                    console::style("✓").green().bold(),
-                    installed_dir.display(),
-                    files_written
-                );
-                println!("  Run 'zeroclaw skill list' to verify the new tools are available.");
-            } else if is_zip_url_source(&source) {
-                // Generic zip-URL install: supports `zip:https://...` prefix and
-                // direct `.zip` URLs.  No system `unzip` binary required.
-                let url = zip_url_from_source(&source);
-                let (installed_dir, files_written) =
-                    install_zip_url_source(url, &skills_path, None)
-                        .with_context(|| format!("failed to install zip skill from: {url}"))?;
-                println!(
-                    "  {} Skill installed from zip: {} ({} files written)",
-                    console::style("✓").green().bold(),
-                    installed_dir.display(),
-                    files_written
-                );
-                println!("  Run 'zeroclaw skill list' to verify the new tools are available.");
-            } else if is_git_source(&source) {
-                let (installed_dir, files_scanned) =
-                    install_git_skill_source(&source, &skills_path, config.skills.allow_scripts)
-                        .with_context(|| format!("failed to install git skill source: {source}"))?;
-                println!(
-                    "  {} Skill installed and audited: {} ({} files scanned)",
-                    console::style("✓").green().bold(),
-                    installed_dir.display(),
-                    files_scanned
-                );
-                println!("  Security audit completed successfully.");
-            } else if is_registry_source(&source) {
-                // ZeroMarket (or compatible) registry: `namespace/name[@version]`
-                let registry_url = &config.wasm.registry_url;
-                let (installed_dir, files_written) =
-                    install_registry_skill_source(&source, &skills_path, registry_url)
-                        .with_context(|| format!("failed to install registry package: {source}"))?;
-                println!(
-                    "  {} WASM skill package installed: {} ({} files written)",
-                    console::style("✓").green().bold(),
-                    installed_dir.display(),
-                    files_written
-                );
-                println!("  Run 'zeroclaw skill list' to verify the new tools are available.");
-            } else {
-                // Check if source is a local .zip file before falling back to directory install
-                let source_path = std::path::Path::new(&source);
-                let is_local_zip = source_path
-                    .extension()
-                    .is_some_and(|e| e.eq_ignore_ascii_case("zip"))
-                    && source_path.is_file();
-
-                if is_local_zip {
-                    let (dest, files_written) = install_local_zip_source(source_path, &skills_path)
-                        .with_context(|| format!("failed to install zip skill from: {source}"))?;
-                    println!(
-                        "  {} Skill installed from zip: {} ({} files written)",
-                        console::style("✓").green().bold(),
-                        dest.display(),
-                        files_written
-                    );
-                    println!("  Run 'zeroclaw skill list' to verify the new tools are available.");
-                } else {
-                    let (dest, files_scanned) = install_local_skill_source(
-                        &source,
-                        &skills_path,
-                        config.skills.allow_scripts,
-                    )
-                    .with_context(|| format!("failed to install local skill source: {source}"))?;
-                    println!(
-                        "  {} Skill installed and audited: {} ({} files scanned)",
-                        console::style("✓").green().bold(),
-                        dest.display(),
-                        files_scanned
-                    );
-                    println!("  Security audit completed successfully.");
-                }
-            }
-
-            Ok(())
-        }
-        crate::SkillCommands::Remove { name } => {
-            // Reject path traversal attempts
-            if name.contains("..") || name.contains('/') || name.contains('\\') {
-                anyhow::bail!("Invalid skill name: {name}");
-            }
-
-            let skill_path = skills_dir(workspace_dir).join(&name);
-
-            // Verify the resolved path is actually inside the skills directory
-            let canonical_skills = skills_dir(workspace_dir)
-                .canonicalize()
-                .unwrap_or_else(|_| skills_dir(workspace_dir));
-            if let Ok(canonical_skill) = skill_path.canonicalize() {
-                if !canonical_skill.starts_with(&canonical_skills) {
-                    anyhow::bail!("Skill path escapes skills directory: {name}");
-                }
-            }
-
-            if !skill_path.exists() {
-                anyhow::bail!("Skill not found: {name}");
-            }
-
-            std::fs::remove_dir_all(&skill_path)?;
-            println!(
-                "  {} Skill '{}' removed.",
-                console::style("✓").green().bold(),
-                name
-            );
-            Ok(())
-        }
-
-        crate::SkillCommands::Templates => {
-            println!("  Available skill templates:\n");
-            println!(
-                "  {:<20} {:<12} {}",
-                console::style("NAME").bold(),
-                console::style("LANGUAGE").bold(),
-                console::style("DESCRIPTION").bold(),
-            );
-            println!("  {}", "─".repeat(72));
-            for tmpl in templates::ALL {
-                println!(
-                    "  {:<20} {:<12} {}",
-                    console::style(tmpl.name).cyan(),
-                    tmpl.language,
-                    tmpl.description,
-                );
-            }
-            println!();
-            println!("  Usage:");
-            println!("    zeroclaw skill new <name> --template <template-name>");
-            println!();
-            println!("  Example:");
-            println!(
-                "    zeroclaw skill new my_weather --template {}",
-                console::style("weather_lookup").cyan()
-            );
-            Ok(())
-        }
-    }
 }
 
 #[cfg(test)]
