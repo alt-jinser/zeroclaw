@@ -274,11 +274,10 @@ pub(crate) struct AuthArgs {
     auth_command: AuthCommands,
 }
 
-#[allow(clippy::too_many_lines)]
-async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> anyhow::Result<()> {
+pub(crate) async fn run(args: AuthArgs, config: &Config) -> anyhow::Result<()> {
     let auth_service = auth::AuthService::from_config(config);
 
-    match auth_command {
+    match args.auth_command {
         AuthCommands::Login {
             provider,
             profile,
@@ -820,8 +819,4 @@ async fn handle_auth_command(auth_command: AuthCommands, config: &Config) -> any
             Ok(())
         }
     }
-}
-
-pub(crate) async fn run(args: AuthArgs, config: &Config) -> anyhow::Result<()> {
-    handle_auth_command(args.auth_command, config).await
 }
