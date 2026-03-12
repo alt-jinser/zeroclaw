@@ -64,7 +64,7 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
                 Command::Agent(args) => agent::run(args, config).await,
                 Command::Gateway(args) => gateway::run(args, config).await,
                 Command::Daemon(args) => daemon::run(args, config).await,
-                Command::Service(args) => service::run(args, config).await,
+                Command::Service(args) => service::run(args, &config).await,
                 Command::Doctor(args) => doctor::run(args, config).await,
                 Command::Status => status::run(config),
                 Command::Update(args) => update::run(args).await,

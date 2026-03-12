@@ -48,23 +48,6 @@ pub use config::Config;
 
 pub const ZEROCLAW_BUILD_VERSION: &str = env!("ZEROCLAW_BUILD_VERSION");
 
-/// Service management subcommands
-#[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ServiceCommands {
-    /// Install daemon service unit for auto-start and restart
-    Install,
-    /// Start daemon service
-    Start,
-    /// Stop daemon service
-    Stop,
-    /// Restart daemon service to apply latest config
-    Restart,
-    /// Check daemon service status
-    Status,
-    /// Uninstall daemon service unit
-    Uninstall,
-}
-
 /// Channel management subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChannelCommands {

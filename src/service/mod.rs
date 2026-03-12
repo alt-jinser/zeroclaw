@@ -89,22 +89,7 @@ fn windows_task_name() -> &'static str {
     WINDOWS_TASK_NAME
 }
 
-pub fn handle_command(
-    command: &crate::ServiceCommands,
-    config: &Config,
-    init_system: InitSystem,
-) -> Result<()> {
-    match command {
-        crate::ServiceCommands::Install => install(config, init_system),
-        crate::ServiceCommands::Start => start(config, init_system),
-        crate::ServiceCommands::Stop => stop(config, init_system),
-        crate::ServiceCommands::Restart => restart(config, init_system),
-        crate::ServiceCommands::Status => status(config, init_system),
-        crate::ServiceCommands::Uninstall => uninstall(config, init_system),
-    }
-}
-
-fn install(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn install(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         install_macos(config)
     } else if cfg!(target_os = "linux") {
@@ -117,7 +102,7 @@ fn install(config: &Config, init_system: InitSystem) -> Result<()> {
     }
 }
 
-fn start(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn start(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         let plist = macos_service_file()?;
         run_checked(Command::new("launchctl").arg("load").arg("-w").arg(&plist))?;
@@ -153,7 +138,7 @@ fn start_linux(init_system: InitSystem) -> Result<()> {
     Ok(())
 }
 
-fn stop(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn stop(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         let plist = macos_service_file()?;
         let _ = run_checked(Command::new("launchctl").arg("stop").arg(SERVICE_LABEL));
@@ -195,7 +180,7 @@ fn stop_linux(init_system: InitSystem) -> Result<()> {
     Ok(())
 }
 
-fn restart(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn restart(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         stop(config, init_system)?;
         start(config, init_system)?;
@@ -233,7 +218,7 @@ fn restart_linux(init_system: InitSystem) -> Result<()> {
     Ok(())
 }
 
-fn status(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn status(config: &Config, init_system: InitSystem) -> Result<()> {
     if cfg!(target_os = "macos") {
         let out = run_capture(Command::new("launchctl").arg("list"))?;
         let running = out.lines().any(|line| line.contains(SERVICE_LABEL));
@@ -305,7 +290,7 @@ fn status_linux(config: &Config, init_system: InitSystem) -> Result<()> {
     Ok(())
 }
 
-fn uninstall(config: &Config, init_system: InitSystem) -> Result<()> {
+pub fn uninstall(config: &Config, init_system: InitSystem) -> Result<()> {
     stop(config, init_system)?;
 
     if cfg!(target_os = "macos") {

@@ -10,7 +10,7 @@ mod cmd;
 // Re-export so binary modules can use crate::<CommandEnum> while keeping a single source of truth.
 pub use zeroclaw::{
     ChannelCommands, CronCommands, HardwareCommands, IntegrationCommands, MigrateCommands,
-    PeripheralCommands, ServiceCommands, SkillCommands,
+    PeripheralCommands, SkillCommands,
 };
 
 use crate::cmd::Cli;
