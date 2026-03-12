@@ -7,9 +7,6 @@ use tracing_subscriber::{fmt, EnvFilter};
 
 mod cmd;
 
-// Re-export so binary modules can use crate::<CommandEnum> while keeping a single source of truth.
-pub use zeroclaw::PeripheralCommands;
-
 use crate::cmd::Cli;
 
 #[tokio::main]
