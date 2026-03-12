@@ -1,7 +1,8 @@
+mod default_ty;
+
 pub mod schema;
 pub mod traits;
 
-#[allow(unused_imports)]
 pub use schema::{
     apply_runtime_proxy_to_builder, build_runtime_proxy_client,
     build_runtime_proxy_client_with_timeouts, default_model_fallback_for_provider,
