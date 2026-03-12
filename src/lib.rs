@@ -48,33 +48,6 @@ pub use config::Config;
 
 pub const ZEROCLAW_BUILD_VERSION: &str = env!("ZEROCLAW_BUILD_VERSION");
 
-/// Migration subcommands
-#[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum MigrateCommands {
-    /// Import OpenClaw data into this ZeroClaw workspace (memory, config, agents)
-    Openclaw {
-        /// Optional path to `OpenClaw` workspace (defaults to ~/.openclaw/workspace)
-        #[arg(long)]
-        source: Option<std::path::PathBuf>,
-
-        /// Optional path to `OpenClaw` config file (defaults to ~/.openclaw/openclaw.json)
-        #[arg(long)]
-        source_config: Option<std::path::PathBuf>,
-
-        /// Validate and preview migration without writing any data
-        #[arg(long)]
-        dry_run: bool,
-
-        /// Skip memory migration
-        #[arg(long)]
-        no_memory: bool,
-
-        /// Skip configuration and agents migration
-        #[arg(long)]
-        no_config: bool,
-    },
-}
-
 /// Memory management subcommands
 #[derive(Subcommand, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum MemoryCommands {

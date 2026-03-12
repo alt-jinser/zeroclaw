@@ -46,7 +46,7 @@ pub(crate) struct ConfigMigrationStats {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub(crate) struct OpenClawMigrationOptions {
+pub struct OpenClawMigrationOptions {
     pub source_workspace: Option<PathBuf>,
     pub source_config: Option<PathBuf>,
     pub include_memory: bool,
@@ -67,7 +67,7 @@ impl Default for OpenClawMigrationOptions {
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
-pub(crate) struct OpenClawMigrationReport {
+pub struct OpenClawMigrationReport {
     source_workspace: PathBuf,
     source_config: PathBuf,
     target_workspace: PathBuf,
@@ -86,30 +86,7 @@ struct JsonMergeStats {
     duplicate_items_skipped: usize,
 }
 
-pub async fn handle_command(command: crate::MigrateCommands, config: &Config) -> Result<()> {
-    match command {
-        crate::MigrateCommands::Openclaw {
-            source,
-            source_config,
-            dry_run,
-            no_memory,
-            no_config,
-        } => {
-            let options = OpenClawMigrationOptions {
-                source_workspace: source,
-                source_config,
-                include_memory: !no_memory,
-                include_config: !no_config,
-                dry_run,
-            };
-            let report = migrate_openclaw(config, options).await?;
-            print_report(&report);
-            Ok(())
-        }
-    }
-}
-
-pub(crate) async fn migrate_openclaw(
+pub async fn migrate_openclaw(
     config: &Config,
     options: OpenClawMigrationOptions,
 ) -> Result<OpenClawMigrationReport> {
@@ -272,7 +249,7 @@ fn collect_source_entries(
     Ok(entries)
 }
 
-fn print_report(report: &OpenClawMigrationReport) {
+pub fn print_report(report: &OpenClawMigrationReport) {
     if report.dry_run {
         println!("🔎 Dry run: OpenClaw migration preview");
     } else {
