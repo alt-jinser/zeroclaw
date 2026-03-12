@@ -23,9 +23,6 @@ pub mod introspect;
 #[cfg(feature = "hardware")]
 pub mod serial;
 
-use crate::config::Config;
-use anyhow::Result;
-
 // Re-export config types so wizard can use `hardware::HardwareConfig` etc.
 pub use crate::config::{HardwareConfig, HardwareTransport};
 #[allow(unused_imports)]
@@ -120,39 +117,6 @@ pub fn config_from_wizard_choice(choice: usize, devices: &[DiscoveredDevice]) ->
             ..HardwareConfig::default()
         },
         _ => HardwareConfig::default(), // software only
-    }
-}
-
-/// Handle `zeroclaw hardware` subcommands.
-#[allow(clippy::module_name_repetitions)]
-pub fn handle_command(cmd: crate::HardwareCommands, _config: &Config) -> Result<()> {
-    #[cfg(not(feature = "hardware"))]
-    {
-        let _ = &cmd;
-        println!("Hardware discovery requires the 'hardware' feature.");
-        println!("Build with: cargo build --features hardware");
-        Ok(())
-    }
-
-    #[cfg(all(
-        feature = "hardware",
-        not(any(target_os = "linux", target_os = "macos", target_os = "windows"))
-    ))]
-    {
-        let _ = &cmd;
-        println!("Hardware USB discovery is not supported on this platform.");
-        println!("Supported platforms: Linux, macOS, Windows.");
-        return Ok(());
-    }
-
-    #[cfg(all(
-        feature = "hardware",
-        any(target_os = "linux", target_os = "macos", target_os = "windows")
-    ))]
-    match cmd {
-        crate::HardwareCommands::Discover => run_discover(),
-        crate::HardwareCommands::Introspect { path } => run_introspect(&path),
-        crate::HardwareCommands::Info { chip } => run_info(&chip),
     }
 }
 

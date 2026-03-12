@@ -39,6 +39,7 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
     match command {
         Command::Onboard(args) => onboard::run(args).await,
         Command::Completions(args) => completions::run(args),
+        Command::Hardware(args) => hardware::run(args),
         cmd_with_config => {
             let mut config = Config::load_or_init().await?;
             config.apply_env_overrides();
@@ -60,7 +61,9 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
                 }
             }
             match cmd_with_config {
-                Command::Onboard(_) | Command::Completions(_) => unreachable!(),
+                Command::Onboard(_) | Command::Completions(_) | Command::Hardware(_) => {
+                    unreachable!()
+                }
                 Command::Agent(args) => agent::run(args, config).await,
                 Command::Gateway(args) => gateway::run(args, config).await,
                 Command::Daemon(args) => daemon::run(args, config).await,
@@ -78,7 +81,6 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
                 Command::Skills(args) => skills::run(args, &config),
                 Command::Migrate(args) => migrate::run(args, &config).await,
                 Command::Auth(args) => auth::run(args, &config).await,
-                Command::Hardware(args) => hardware::run(args, &config),
                 Command::Peripheral(args) => peripheral::run(args, &config).await,
                 Command::Memory(args) => memory::run(args, &config).await,
                 Command::Config(args) => config::run(args, config).await,
