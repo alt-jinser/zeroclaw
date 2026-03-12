@@ -9,26 +9,6 @@ use anyhow::Context;
 use anyhow::{bail, Result};
 use console::style;
 
-/// Handle `zeroclaw memory <subcommand>` CLI commands.
-pub async fn handle_command(command: crate::MemoryCommands, config: &Config) -> Result<()> {
-    match command {
-        crate::MemoryCommands::List {
-            category,
-            session,
-            limit,
-            offset,
-        } => handle_list(config, category, session, limit, offset).await,
-        crate::MemoryCommands::Get { key } => handle_get(config, &key).await,
-        crate::MemoryCommands::Stats => handle_stats(config).await,
-        crate::MemoryCommands::Clear { key, category, yes } => {
-            handle_clear(config, key, category, yes).await
-        }
-        crate::MemoryCommands::Reindex { yes, progress } => {
-            handle_reindex(config, yes, progress).await
-        }
-    }
-}
-
 /// Create a lightweight memory backend for CLI management operations.
 ///
 /// CLI commands (list/get/stats/clear) never use vector search, so we skip
@@ -79,7 +59,7 @@ fn create_cli_memory(config: &Config) -> Result<Box<dyn Memory>> {
     }
 }
 
-async fn handle_list(
+pub async fn handle_list(
     config: &Config,
     category: Option<String>,
     session: Option<String>,
@@ -125,7 +105,7 @@ async fn handle_list(
     Ok(())
 }
 
-async fn handle_get(config: &Config, key: &str) -> Result<()> {
+pub async fn handle_get(config: &Config, key: &str) -> Result<()> {
     let mem = create_cli_memory(config)?;
 
     // Try exact match first.
@@ -167,7 +147,7 @@ fn print_entry(entry: &super::traits::MemoryEntry) {
     println!("\n{}", entry.content);
 }
 
-async fn handle_stats(config: &Config) -> Result<()> {
+pub async fn handle_stats(config: &Config) -> Result<()> {
     let mem = create_cli_memory(config)?;
     let healthy = mem.health_check().await;
     let total = mem.count().await.unwrap_or(0);
@@ -202,7 +182,7 @@ async fn handle_stats(config: &Config) -> Result<()> {
     Ok(())
 }
 
-async fn handle_clear(
+pub async fn handle_clear(
     config: &Config,
     key: Option<String>,
     category: Option<String>,
@@ -302,7 +282,7 @@ async fn handle_clear_key(mem: &dyn Memory, key: &str, yes: bool) -> Result<()> 
 }
 
 /// Rebuild embeddings for all memories using current embedding configuration.
-async fn handle_reindex(config: &Config, yes: bool, progress: bool) -> Result<()> {
+pub async fn handle_reindex(config: &Config, yes: bool, progress: bool) -> Result<()> {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
