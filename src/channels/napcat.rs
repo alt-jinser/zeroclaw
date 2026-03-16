@@ -19,6 +19,7 @@ const NAPCAT_SEND_PRIVATE: &str = "/send_private_msg";
 const NAPCAT_SEND_GROUP: &str = "/send_group_msg";
 const NAPCAT_SET_EMOJI_LIKE: &str = "/set_msg_emoji_like";
 const NAPCAT_STATUS: &str = "/get_status";
+const NAPCAT_GET_MSG: &str = "/get_msg";
 const NAPCAT_DEDUP_CAPACITY: usize = 10_000;
 const NAPCAT_MAX_BACKOFF_SECS: u64 = 60;
 
@@ -303,6 +304,42 @@ impl NapcatChannel {
         Ok(())
     }
 
+    async fn call_onebot_api(&self, endpoint: &str, body: &Value) -> anyhow::Result<Value> {
+        let url = format!("{}{}", self.api_base_url, endpoint);
+        let mut request = self.http_client().post(&url).json(body);
+        if let Some(token) = &self.access_token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let err = response.text().await.unwrap_or_default();
+            let sanitized = crate::providers::sanitize_api_error(&err);
+            anyhow::bail!("Napcat HTTP request failed ({status}): {sanitized}");
+        }
+
+        let payload: Value = response
+            .json()
+            .await
+            .context("Failed to parse JSON response")?;
+
+        if payload
+            .get("retcode")
+            .and_then(Value::as_i64)
+            .is_some_and(|retcode| retcode != 0)
+        {
+            let msg = payload
+                .get("wording")
+                .and_then(Value::as_str)
+                .or_else(|| payload.get("msg").and_then(Value::as_str))
+                .unwrap_or("unknown error");
+            anyhow::bail!("Napcat returned retcode != 0: {msg}");
+        }
+
+        Ok(payload)
+    }
+
     fn build_ws_request(&self) -> Result<tokio_tungstenite::tungstenite::http::Request<()>> {
         let mut ws_url =
             Url::parse(&self.websocket_url).with_context(|| "invalid napcat.websocket_url")?;
@@ -326,7 +363,104 @@ impl NapcatChannel {
         Ok(request)
     }
 
+    async fn parse_notice_event(&self, event: &Value) -> Option<ChannelMessage> {
+        let notice_type = event.get("notice_type").and_then(Value::as_str)?;
+        if notice_type != "group_msg_emoji_like" {
+            return None;
+        }
+
+        let group_id = event.get("group_id").and_then(Value::as_i64)?;
+        let user_id = event.get("user_id").and_then(Value::as_i64)?;
+        let message_id = event.get("message_id").and_then(Value::as_i64)?;
+        let is_add = event
+            .get("is_add")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        if !is_add {
+            return None;
+        }
+
+        let likes = event.get("likes").and_then(Value::as_array)?;
+
+        const TARGET_EMOJI_ID: &str = "10068"; // ❔
+
+        let has_target = likes
+            .iter()
+            .any(|like| like.get("emoji_id").and_then(Value::as_str) == Some(TARGET_EMOJI_ID));
+        if !has_target {
+            return None;
+        }
+
+        let dedup_id = format!("{}_{}_{}", message_id, user_id, TARGET_EMOJI_ID);
+        if self.is_duplicate(&dedup_id).await {
+            return None;
+        }
+
+        let user_id_str = user_id.to_string();
+        if !self.is_user_allowed(&user_id_str) {
+            tracing::warn!(
+                "Napcat: ignoring emoji like from unauthorized user: {}",
+                user_id
+            );
+            return None;
+        }
+
+        let body = json!({ "message_id": message_id });
+        let msg_resp = match self.call_onebot_api(NAPCAT_GET_MSG, &body).await {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!("Failed to fetch original message: {}", e);
+                return None;
+            }
+        };
+
+        let data = msg_resp.get("data")?;
+
+        let message_val = data.get("message")?;
+        let original_content = if message_val.is_array() {
+            parse_message_segments(message_val)
+        } else if let Some(s) = message_val.as_str() {
+            s.to_string()
+        } else {
+            tracing::warn!("Unexpected message format");
+            return None;
+        };
+
+        let sender = data.get("sender");
+        let sender_nickname = sender
+            .and_then(|s| s.get("nickname"))
+            .and_then(Value::as_str)
+            .unwrap_or("未知用户");
+        let sender_id = sender
+            .and_then(|s| s.get("user_id"))
+            .and_then(Value::as_str)
+            .unwrap_or("未知ID");
+
+        let content = format!(
+            r#"{user_id} 希望你对一段由用户 {sender_nickname}({sender_id}) 发送的消息进行解释。
+            请你注意：
+            1. 你接下来发送的内容将在群聊中直接回复该消息，你可以直接使用第二人称对消息和发送消息者进行回复。
+            2. 不要使用任何 Markdown 语法，也不要使用任何列表、表格等格式。
+            3. 保持专业、精确、简洁且克制的口吻，闲聊和解释的语气。
+            消息内容为：`{original_content}`"#,
+        );
+
+        Some(ChannelMessage {
+            id: dedup_id,
+            sender: user_id_str,
+            reply_target: format!("group:{}", group_id),
+            content,
+            channel: "napcat".to_string(),
+            timestamp: event.get("time").and_then(Value::as_u64)?,
+            thread_ts: Some(message_id.to_string()),
+        })
+    }
+
     async fn parse_message_event(&self, event: &Value) -> Option<ChannelMessage> {
+        if event.get("post_type").and_then(Value::as_str) == Some("notice") {
+            return self.parse_notice_event(event).await;
+        }
+
         if event.get("post_type").and_then(Value::as_str) != Some("message") {
             return None;
         }
