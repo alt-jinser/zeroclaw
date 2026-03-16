@@ -3485,8 +3485,10 @@ pub struct HeartbeatConfig {
     /// Optional fallback task text when `HEARTBEAT.md` has no task entries.
     pub message: Option<String>,
     /// Optional delivery channel for heartbeat output (for example: `telegram`).
+    #[serde(alias = "channel")]
     pub target: Option<String>,
     /// Optional delivery recipient/chat identifier (required when `target` is set).
+    #[serde(alias = "recipient")]
     pub to: Option<String>,
 }
 
