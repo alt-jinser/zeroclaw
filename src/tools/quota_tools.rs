@@ -53,7 +53,7 @@ impl CheckProviderQuotaTool {
 
         // Load OAuth profiles (state_dir = config dir parent, where auth-profiles.json lives)
         let state_dir = crate::auth::state_dir_from_config(&self.config);
-        let auth_store = AuthProfilesStore::new(&state_dir, self.config.secrets.encrypt);
+        let auth_store = AuthProfilesStore::new(&state_dir);
         let profiles_data = auth_store.load().await?;
 
         // Build quota summary using quota_cli logic

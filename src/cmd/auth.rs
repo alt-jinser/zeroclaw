@@ -115,10 +115,7 @@ struct PendingOAuthLoginFile {
 }
 
 fn pending_oauth_secret_store(config: &Config) -> security::secrets::SecretStore {
-    security::secrets::SecretStore::new(
-        &auth::state_dir_from_config(config),
-        config.secrets.encrypt,
-    )
+    security::secrets::SecretStore::new(&auth::state_dir_from_config(config), true)
 }
 
 fn clear_pending_oauth_login(config: &Config, provider: &str) {

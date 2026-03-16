@@ -156,7 +156,7 @@ impl OpenAiCodexProvider {
             .zeroclaw_dir
             .clone()
             .unwrap_or_else(default_zeroclaw_dir);
-        let auth = AuthService::new(&state_dir, options.secrets_encrypt);
+        let auth = AuthService::new(&state_dir);
         let responses_url = resolve_responses_url(options)?;
 
         Ok(Self {

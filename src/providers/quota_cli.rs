@@ -24,7 +24,7 @@ pub async fn run(config: &Config, provider_filter: Option<&str>, format: &str) -
     );
 
     // 2. Load OAuth profiles
-    let auth_store = AuthProfilesStore::new(&config.workspace_dir, config.secrets.encrypt);
+    let auth_store = AuthProfilesStore::new(&config.workspace_dir);
     let profiles_data = auth_store
         .load()
         .await

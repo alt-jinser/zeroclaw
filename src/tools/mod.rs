@@ -636,7 +636,6 @@ pub fn all_tools_with_runtime(
                 .config_path
                 .parent()
                 .map(std::path::PathBuf::from),
-            secrets_encrypt: root_config.secrets.encrypt,
             reasoning_enabled: root_config.runtime.reasoning_enabled,
             reasoning_level: root_config.effective_provider_reasoning_level(),
             custom_provider_api_mode: root_config

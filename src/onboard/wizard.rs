@@ -7,8 +7,7 @@ use crate::config::{
     AutonomyConfig, BrowserConfig, ChannelsConfig, ComposioConfig, Config, DiscordConfig,
     HeartbeatConfig, HttpRequestConfig, HttpRequestCredentialProfile, IMessageConfig,
     IdentityConfig, LarkConfig, MatrixConfig, MemoryConfig, ObservabilityConfig, RuntimeConfig,
-    SecretsConfig, SlackConfig, StorageConfig, TelegramConfig, WebFetchConfig, WebSearchConfig,
-    WebhookConfig,
+    SlackConfig, StorageConfig, TelegramConfig, WebFetchConfig, WebSearchConfig, WebhookConfig,
 };
 use crate::hardware::{self, HardwareConfig};
 use crate::identity::{
@@ -200,7 +199,7 @@ pub async fn run_wizard_with_migration(
     let tunnel_config = setup_tunnel()?;
 
     print_step(5, 11, "Tool Mode & Security");
-    let (composio_config, secrets_config) = setup_tool_mode()?;
+    let composio_config = setup_tool_mode()?;
 
     print_step(6, 11, "Web & Internet Tools");
     let (web_search_config, web_fetch_config, http_request_config) = setup_web_tools()?;
@@ -264,7 +263,6 @@ pub async fn run_wizard_with_migration(
         tunnel: tunnel_config,
         gateway: crate::config::GatewayConfig::default(),
         composio: composio_config,
-        secrets: secrets_config,
         browser: BrowserConfig::default(),
         http_request: http_request_config,
         multimodal: crate::config::MultimodalConfig::default(),
@@ -780,7 +778,6 @@ async fn run_quick_setup_with_home(
         tunnel: crate::config::TunnelConfig::default(),
         gateway: crate::config::GatewayConfig::default(),
         composio: ComposioConfig::default(),
-        secrets: SecretsConfig::default(),
         browser: BrowserConfig::default(),
         http_request: crate::config::HttpRequestConfig::default(),
         multimodal: crate::config::MultimodalConfig::default(),
@@ -3865,7 +3862,7 @@ fn setup_web_tools() -> Result<(WebSearchConfig, WebFetchConfig, HttpRequestConf
 
 // ── Step 5: Tool Mode & Security ────────────────────────────────
 
-fn setup_tool_mode() -> Result<(ComposioConfig, SecretsConfig)> {
+fn setup_tool_mode() -> Result<ComposioConfig> {
     print_bullet("Choose how ZeroClaw connects to external apps.");
     print_bullet("You can always change this later in config.toml.");
     println!();
@@ -3934,8 +3931,6 @@ fn setup_tool_mode() -> Result<(ComposioConfig, SecretsConfig)> {
         .default(true)
         .interact()?;
 
-    let secrets_config = SecretsConfig { encrypt };
-
     if encrypt {
         println!(
             "  {} Secrets: {} — keys encrypted with local key file",
@@ -3950,7 +3945,7 @@ fn setup_tool_mode() -> Result<(ComposioConfig, SecretsConfig)> {
         );
     }
 
-    Ok((composio_config, secrets_config))
+    Ok(composio_config)
 }
 
 // ── Step 6: Hardware (Physical World) ───────────────────────────

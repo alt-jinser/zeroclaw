@@ -34,12 +34,12 @@ pub struct AuthService {
 impl AuthService {
     pub fn from_config(config: &Config) -> Self {
         let state_dir = state_dir_from_config(config);
-        Self::new(&state_dir, config.secrets.encrypt)
+        Self::new(&state_dir)
     }
 
-    pub fn new(state_dir: &Path, encrypt_secrets: bool) -> Self {
+    pub fn new(state_dir: &Path) -> Self {
         Self {
-            store: AuthProfilesStore::new(state_dir, encrypt_secrets),
+            store: AuthProfilesStore::new(state_dir),
             client: reqwest::Client::new(),
         }
     }

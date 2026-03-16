@@ -732,37 +732,18 @@ fn stepfun_base_url(name: &str) -> Option<&'static str> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProviderRuntimeOptions {
     pub auth_profile_override: Option<String>,
     pub provider_api_url: Option<String>,
     pub provider_transport: Option<String>,
     pub zeroclaw_dir: Option<PathBuf>,
-    pub secrets_encrypt: bool,
     pub reasoning_enabled: Option<bool>,
     pub reasoning_level: Option<String>,
     pub custom_provider_api_mode: Option<CompatibleApiMode>,
     pub custom_provider_auth_header: Option<String>,
     pub max_tokens_override: Option<u32>,
     pub model_support_vision: Option<bool>,
-}
-
-impl Default for ProviderRuntimeOptions {
-    fn default() -> Self {
-        Self {
-            auth_profile_override: None,
-            provider_api_url: None,
-            provider_transport: None,
-            zeroclaw_dir: None,
-            secrets_encrypt: true,
-            reasoning_enabled: None,
-            reasoning_level: None,
-            custom_provider_api_mode: None,
-            custom_provider_auth_header: None,
-            max_tokens_override: None,
-            model_support_vision: None,
-        }
-    }
 }
 
 fn is_secret_char(c: char) -> bool {
@@ -1182,7 +1163,7 @@ fn create_provider_with_url_and_options(
                     |dirs| dirs.home_dir().join(".zeroclaw"),
                 )
             });
-            let auth_service = AuthService::new(&state_dir, options.secrets_encrypt);
+            let auth_service = AuthService::new(&state_dir);
             Ok(Box::new(gemini::GeminiProvider::new_with_auth(
                 key,
                 auth_service,

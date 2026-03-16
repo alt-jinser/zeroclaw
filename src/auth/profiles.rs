@@ -151,11 +151,11 @@ pub struct AuthProfilesStore {
 }
 
 impl AuthProfilesStore {
-    pub fn new(state_dir: &Path, encrypt_secrets: bool) -> Self {
+    pub fn new(state_dir: &Path) -> Self {
         Self {
             path: state_dir.join(PROFILES_FILENAME),
             lock_path: state_dir.join(LOCK_FILENAME),
-            secret_store: SecretStore::new(state_dir, encrypt_secrets),
+            secret_store: SecretStore::new(state_dir, false),
         }
     }
 

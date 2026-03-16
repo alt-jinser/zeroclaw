@@ -32,7 +32,7 @@ pub async fn check_quota_warning(
         100,                     // max tracked providers
     );
 
-    let auth_store = AuthProfilesStore::new(&config.workspace_dir, config.secrets.encrypt);
+    let auth_store = AuthProfilesStore::new(&config.workspace_dir);
     let profiles_data = auth_store.load().await?;
 
     let summary = crate::providers::quota_cli::build_quota_summary(
@@ -180,7 +180,7 @@ pub async fn find_available_provider(
         100,                     // max tracked providers
     );
 
-    let auth_store = AuthProfilesStore::new(&config.workspace_dir, config.secrets.encrypt);
+    let auth_store = AuthProfilesStore::new(&config.workspace_dir);
     let profiles_data = auth_store.load().await?;
 
     let summary =

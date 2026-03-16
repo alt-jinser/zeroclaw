@@ -52,7 +52,7 @@ pub(crate) async fn run(command: Command) -> anyhow::Result<()> {
                     .config_path
                     .parent()
                     .context("Config path must have a parent directory")?;
-                let store = security::SecretStore::new(config_dir, config.secrets.encrypt);
+                let store = security::SecretStore::new(config_dir, true);
                 let (_validator, enrollment_uri) =
                     security::OtpValidator::from_config(&config.security.otp, config_dir, &store)?;
                 if let Some(uri) = enrollment_uri {

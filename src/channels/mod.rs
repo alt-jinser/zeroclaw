@@ -1282,23 +1282,6 @@ async fn config_file_stamp(path: &Path) -> Option<ConfigFileStamp> {
     })
 }
 
-fn decrypt_optional_secret_for_runtime_reload(
-    store: &crate::security::SecretStore,
-    value: &mut Option<String>,
-    field_name: &str,
-) -> Result<()> {
-    if let Some(raw) = value.clone() {
-        if crate::security::SecretStore::is_encrypted(&raw) {
-            *value = Some(
-                store
-                    .decrypt(&raw)
-                    .with_context(|| format!("Failed to decrypt {field_name}"))?,
-            );
-        }
-    }
-    Ok(())
-}
-
 async fn load_runtime_defaults_from_config_file(
     path: &Path,
 ) -> Result<(ChannelRuntimeDefaults, RuntimeAutonomyPolicy)> {
@@ -1308,16 +1291,6 @@ async fn load_runtime_defaults_from_config_file(
     let mut parsed: Config =
         toml::from_str(&contents).with_context(|| format!("Failed to parse {}", path.display()))?;
     parsed.config_path = path.to_path_buf();
-
-    if let Some(zeroclaw_dir) = path.parent() {
-        let store = crate::security::SecretStore::new(zeroclaw_dir, parsed.secrets.encrypt);
-        decrypt_optional_secret_for_runtime_reload(&store, &mut parsed.api_key, "config.api_key")?;
-        decrypt_optional_secret_for_runtime_reload(
-            &store,
-            &mut parsed.transcription.api_key,
-            "config.transcription.api_key",
-        )?;
-    }
 
     parsed.apply_env_overrides();
     Ok((
@@ -5366,7 +5339,6 @@ pub async fn start_channels(config: Config) -> Result<()> {
         provider_api_url: config.api_url.clone(),
         provider_transport: config.effective_provider_transport(),
         zeroclaw_dir: config.config_path.parent().map(std::path::PathBuf::from),
-        secrets_encrypt: config.secrets.encrypt,
         reasoning_enabled: config.runtime.reasoning_enabled,
         reasoning_level: config.effective_provider_reasoning_level(),
         custom_provider_api_mode: config.provider_api.map(|mode| mode.as_compatible_mode()),
